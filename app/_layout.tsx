@@ -1,24 +1,20 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
+import { View, StyleSheet, TextStyle } from 'react-native';
+// Import our new ThemeProvider and useAppColorScheme
+import { ThemeProvider, useAppColorScheme } from '@/components/ThemeContext';
 
-import { useColorScheme } from '@/components/useColorScheme';
-
-export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
-} from 'expo-router';
+export { ErrorBoundary } from 'expo-router';
 
 export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
   initialRouteName: '(tabs)',
 };
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -27,7 +23,6 @@ export default function RootLayout() {
     ...FontAwesome.font,
   });
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
     if (error) throw error;
   }, [error]);
@@ -42,18 +37,69 @@ export default function RootLayout() {
     return null;
   }
 
-  return <RootLayoutNav />;
-}
-
-function RootLayoutNav() {
-  const colorScheme = useColorScheme();
-
+  // Wrap the RootLayoutNav with our ThemeProvider
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
+    <ThemeProvider>
+      <RootLayoutNav />
     </ThemeProvider>
   );
 }
+
+function RootLayoutNav() {
+  // Use our custom hook that respects manual theme preferences
+  const colorScheme = useAppColorScheme();
+
+  const commonScreenOptions = {
+    headerStyle: {
+      backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#ffffff',
+    },
+    headerTintColor: colorScheme === 'dark' ? '#ffffff' : '#000000',
+    headerTitleStyle: {
+      fontWeight: 'bold' as TextStyle['fontWeight'],
+    },
+    contentStyle: {
+      backgroundColor: colorScheme === 'dark' ? '#121212' : '#f4f4f4',
+    }
+  };
+
+  return (
+    <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <Stack screenOptions={commonScreenOptions}>
+        {/* Main app tabs */}
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        
+        {/* Auth screens */}
+        <Stack.Screen 
+          name="(auth)/login" 
+          options={{ 
+            title: 'Login',
+            ...commonScreenOptions
+          }} 
+        />
+        <Stack.Screen 
+          name="(auth)/signup" 
+          options={{ 
+            title: 'Sign Up',
+            ...commonScreenOptions
+          }} 
+        />
+        
+        {/* Other screens */}
+        <Stack.Screen 
+          name="modal" 
+          options={{ 
+            presentation: 'modal',
+            ...commonScreenOptions
+          }} 
+        />
+      </Stack>
+    </NavigationThemeProvider>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+  },
+});
