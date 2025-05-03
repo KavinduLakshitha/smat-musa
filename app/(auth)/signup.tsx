@@ -36,7 +36,7 @@ export default function SignupScreen() {
       });
 
       Alert.alert("Signup successful!", "You can now log in.");
-      router.replace("/(auth)/login");
+      router.replace("/login")
     } catch (error: any) {
       let errorMessage = error.message;
       if (error.code === 'auth/email-already-in-use') {

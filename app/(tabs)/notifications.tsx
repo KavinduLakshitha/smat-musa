@@ -31,9 +31,7 @@ export default function NotificationsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
-            <Text style={styles.title}>Notifications</Text>
-            <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
+        <View style={styles.container}>           
             
             <FlatList
                 data={notifications}

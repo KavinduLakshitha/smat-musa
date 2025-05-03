@@ -18,7 +18,7 @@ export default function SettingsScreen() {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      router.replace("/(auth)/login");
+      router.replace("/login")
     } catch (error) {
       console.error("Sign out error:", error);
     }
@@ -27,8 +27,6 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
         <ScrollView style={styles.container}>      
-        <Text style={styles.title}>Settings</Text>
-      
         <View style={styles.section}>
             <View style={styles.sectionContent}>
             <View style={styles.settingItem}>

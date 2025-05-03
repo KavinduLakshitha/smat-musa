@@ -5,13 +5,15 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
-import { View, StyleSheet, TextStyle } from 'react-native';
-// Import our new ThemeProvider and useAppColorScheme
+import { TextStyle } from 'react-native';
+// Import our ThemeProvider and useAppColorScheme
 import { ThemeProvider, useAppColorScheme } from '@/components/ThemeContext';
 
 export { ErrorBoundary } from 'expo-router';
 
+// Updated for Expo Router v5
 export const unstable_settings = {
+  // Initial route is now just the root tabs
   initialRouteName: '(tabs)',
 };
 
@@ -65,23 +67,13 @@ function RootLayoutNav() {
   return (
     <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={commonScreenOptions}>
-        {/* Main app tabs */}
+        {/* Main app tabs - keep as is */}
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         
-        {/* Auth screens */}
+        {/* Auth screens - these should be groups now, not direct routes */}
         <Stack.Screen 
-          name="(auth)/login" 
-          options={{ 
-            title: 'Login',
-            ...commonScreenOptions
-          }} 
-        />
-        <Stack.Screen 
-          name="(auth)/signup" 
-          options={{ 
-            title: 'Sign Up',
-            ...commonScreenOptions
-          }} 
+          name="(auth)" 
+          options={{ headerShown: false }} 
         />
         
         {/* Other screens */}
@@ -96,10 +88,3 @@ function RootLayoutNav() {
     </NavigationThemeProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-});

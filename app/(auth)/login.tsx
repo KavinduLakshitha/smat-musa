@@ -17,7 +17,7 @@ export default function LoginScreen() {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         // User is signed in, redirect to tabs
-        router.replace("/(tabs)");
+        router.replace("/");
       }
       // Finished checking, hide loading state
       setInitialLoading(false);
@@ -38,7 +38,7 @@ export default function LoginScreen() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.replace("/(tabs)");
+      router.replace("/");
     } catch (error: any) {
       let errorMessage = "Login failed. Please try again.";
       switch (error.code) {
@@ -129,7 +129,7 @@ export default function LoginScreen() {
               
               <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 20 }}>
                 <Text style={{ marginRight: 5 }}>Don't have an account?</Text>
-                <Link href="/(auth)/signup" asChild>
+                <Link href="/signup" asChild>
                   <Button mode="text" compact disabled={loading}>
                     Sign Up
                   </Button>
