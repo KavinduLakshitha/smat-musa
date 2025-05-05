@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Modal } from 'react-native';
 
-const API_URL = "http://192.168.8.174:8000/predict"; // Change to your local API URL
+const API_URL = "https://kavindulm98-smat-musa.hf.space/predict";
 
 export default function UploadScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -105,17 +105,29 @@ const loadPrediction = async () => {
     try {
       const response = await fetch(API_URL, {
         method: "POST",
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
         body: formData,
       });
-
-      const result = await response.json();
+      
+      // Log raw response for debugging
+      const responseText = await response.text();
+      console.log("Raw response:", responseText);
+      
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("JSON parse error:", parseError);
+        throw new Error("Invalid response format");
+      }
+      
+      if (result.gradcam_image) {
+        result.gradcam_image = `https://kavindulm98-smat-musa.hf.space${result.gradcam_image}`;
+      }
+      
       setPrediction(result);
-      savePrediction(result); // ✅ Save the prediction for offline use
+      savePrediction(result);
     } catch (error) {
-      Alert.alert("Prediction Error", "Something went wrong with the API.");
+      Alert.alert("Error", `API Error: ${error.message}`);
       console.error(error);
     } finally {
       setLoading(false);
