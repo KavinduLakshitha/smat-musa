@@ -127,7 +127,8 @@ const loadPrediction = async () => {
       setPrediction(result);
       savePrediction(result);
     } catch (error) {
-      Alert.alert("Error", `API Error: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+      Alert.alert("Error", `API Error: ${errorMessage}`);
       console.error(error);
     } finally {
       setLoading(false);

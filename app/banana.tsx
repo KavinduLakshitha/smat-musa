@@ -142,7 +142,7 @@ const BananaScreen = () => {
     } as any);
 
     try {
-      const response = await axios.post("http://192.168.1.100:5005/predict", formData, {
+      const response = await axios.post("https://kavimdulm98-smat-musa-banana.hf.space/predict", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
