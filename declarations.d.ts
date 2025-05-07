@@ -1,0 +1,16 @@
+declare module 'babel__core';
+declare module 'babel__generator';
+declare module 'babel__template';
+declare module 'babel__traverse';
+declare module 'eslint';
+declare module 'estree';
+declare module 'graceful-fs';
+declare module 'hammerjs';
+declare module 'istanbul-lib-coverage';
+declare module 'istanbul-lib-report';
+declare module 'istanbul-reports';
+declare module 'json-schema';
+declare module 'stack-utils';
+declare module 'tough-cookie';
+declare module 'yargs';
+declare module 'yargs-parser';

@@ -159,7 +159,7 @@ const BananaScreen = () => {
     
     try {
       const response = await axios.post(
-        "https://smat-musa-backend.onrender.com/predict", 
+        "https://kavinduLM98-banana-classification.hf.space/predict", 
         formData, 
         { headers: { "Content-Type": "multipart/form-data" }}
       );
