@@ -3,7 +3,7 @@ import { View, Image, Alert, ActivityIndicator, SafeAreaView, StyleSheet } from 
 import { Button, Text, Card } from "react-native-paper";
 import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
-import { useLanguage } from "@/components/LanguageContext";
+import { useLanguage } from "../LanguageContext";
 import { Stack } from "expo-router";
 
 export default function BananaRoute() {
@@ -21,7 +21,9 @@ export default function BananaRoute() {
 }
 
 const BananaScreen = () => {
-  const { language } = useLanguage() as { language: keyof typeof translations };
+  const languageContext = useLanguage();
+  const language = (languageContext && languageContext.language) ? languageContext.language : 'en';
+  
   const [image, setImage] = useState<string | null>(null);
   const [result, setResult] = useState<{
     predicted_class: string;
@@ -81,41 +83,52 @@ const BananaScreen = () => {
     },
   };
 
-  const t = translations[language as keyof typeof translations];
-
+  const t = translations[language as keyof typeof translations] || translations.en;
   const pickImage = async () => {
+    console.log("Picking image...");
+    
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       Alert.alert(t.permissionDenied, t.permissionGallery);
       return;
     }
+    
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       quality: 1,
     });
 
+    console.log("Image picker result:", result.canceled ? "Canceled" : "Image selected");
+    
     if (!result.canceled) {
       setImage(result.assets[0].uri);
       setResult(null);
+      console.log("Image URI set:", result.assets[0].uri);
     }
   };
 
   const takePhoto = async () => {
+    console.log("Taking photo...");
+    
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
       Alert.alert(t.permissionDenied, t.permissionCamera);
       return;
     }
+    
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
       quality: 1,
     });
 
+    console.log("Camera result:", result.canceled ? "Canceled" : "Photo taken");
+    
     if (!result.canceled) {
       const imageUri = result.assets[0].uri;
       setImage(imageUri);
       setResult(null);
+      console.log("Image URI set:", imageUri);
       classifyImage(imageUri);
     }
   };
@@ -131,6 +144,7 @@ const BananaScreen = () => {
       return;
     }
 
+    console.log("Classifying image:", imageUri);
     setLoading(true);
     setResult(null);
 
@@ -141,11 +155,17 @@ const BananaScreen = () => {
       type: "image/jpeg",
     } as any);
 
+    console.log("Sending request to API...");
+    
     try {
-      const response = await axios.post("https://kavimdulm98-smat-musa-banana.hf.space/predict", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await axios.post(
+        "https://smat-musa-backend.onrender.com/predict", 
+        formData, 
+        { headers: { "Content-Type": "multipart/form-data" }}
+      );
 
+      console.log("API response received:", response.data);
+      
       const predictedClass = response.data.predicted_class;
       const confidence = response.data.confidence;
 
@@ -156,7 +176,10 @@ const BananaScreen = () => {
         confidence: (confidence * 100).toFixed(2) + "%",
         shelf_life: getShelfLife(predictedClass),
       });
+      
+      console.log("Result set successfully");
     } catch (error) {
+      console.error("API request failed:", error);
       Alert.alert(t.error, t.classificationError);
     } finally {
       setLoading(false);
@@ -168,7 +191,6 @@ const BananaScreen = () => {
       <View style={styles.container}>
         <Card style={{ padding: 20, borderRadius: 10, width: '90%' }}>
           <Card.Content>
-
             {image && (
               <Image
                 source={{ uri: image }}
@@ -198,13 +220,13 @@ const BananaScreen = () => {
 
             {result && (
               <View style={{ marginTop: 20 }}>
-                <Text style={styles.notificationTitle}>
+                <Text style={styles.resultText}>
                   {t.prediction}: {result.predicted_class}
                 </Text>
-                <Text style={styles.notificationTime}>
+                <Text style={styles.resultText}>
                   {t.confidence}: {result.confidence}
                 </Text>
-                <Text style={styles.notificationTime}>
+                <Text style={styles.resultText}>
                   {t.shelfLife}: {result.shelf_life}
                 </Text>
               </View>
@@ -227,42 +249,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     paddingTop: 20,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  separator: {
-    marginVertical: 20,
-    height: 1,
-    width: '80%',
-  },
-  list: {
-    width: '100%',
-    paddingHorizontal: 20,
-  },
-  notificationItem: {
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 10,
-    width: '100%',
-  },
-  notificationTitle: {
-    fontWeight: '600',
+  resultText: {
     fontSize: 16,
     marginBottom: 5,
-  },
-  notificationTime: {
-    fontSize: 14,
-  },
-  emptyText: {
-    textAlign: 'center',
-    marginTop: 20,
-    fontSize: 16,
-  },
-  emptyContainer: {
-    flexGrow: 1,
-    justifyContent: 'center',
-  },
+  }
 });
-
-// export default BananaScreen;
