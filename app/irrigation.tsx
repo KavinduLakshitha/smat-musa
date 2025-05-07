@@ -1,12 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, Alert, SafeAreaView, TouchableOpacity, Dimensions } from 'react-native';
-import { Text, Card, Button, Switch, Menu, Modal, Portal, Provider as PaperProvider } from 'react-native-paper';
+import { 
+  View, 
+  ScrollView, 
+  StyleSheet, 
+  Alert, 
+  SafeAreaView, 
+  TouchableOpacity, 
+  Dimensions,
+  Modal,
+  Platform,
+  ActivityIndicator,
+  Text
+} from 'react-native';
 import { Stack } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '@/components/LanguageContext';
 import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, onValue, set, get } from 'firebase/database';
-import { getAuth, connectAuthEmulator, signInAnonymously } from 'firebase/auth';
+import { getAuth, signInAnonymously } from 'firebase/auth';
+import { COLORS } from '@/constants/Colors';
 
 // Smart agriculture Firebase configuration
 const irrigationFirebaseConfig = {
@@ -106,7 +118,9 @@ const IrrigationDashboard = () => {
   const { language } = useLanguage() as { language: string };
   const [timeRange, setTimeRange] = useState<string>('24h');
   const [settingsVisible, setSettingsVisible] = useState<boolean>(false);
-  const [menuVisible, setMenuVisible] = useState<boolean | string>(false);
+  const [timeRangeModalVisible, setTimeRangeModalVisible] = useState<boolean>(false);
+  const [bananaTypeModalVisible, setBananaTypeModalVisible] = useState<boolean>(false);
+  const [cropStageModalVisible, setCropStageModalVisible] = useState<boolean>(false);
   const [sensorData, setSensorData] = useState<SensorData[]>([]);
   const [summaryData, setSummaryData] = useState<SummaryData>({
     avgTemperature: '-',
@@ -125,6 +139,7 @@ const IrrigationDashboard = () => {
   const [humidityData, setHumidityData] = useState<number[]>([]);
   const [moistureData, setMoistureData] = useState<number[]>([]);
   const [chartLabels, setChartLabels] = useState<string[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   
   const translations: TranslationsType = {
     en: {
@@ -205,6 +220,7 @@ const IrrigationDashboard = () => {
   useEffect(() => {
     const initFirebase = async () => {
       try {
+        setLoading(true);
         await signInAnonymously(irrigationAuth);
         console.log('User signed in anonymously to irrigation system');
         
@@ -212,8 +228,10 @@ const IrrigationDashboard = () => {
         loadSummaryData();
         loadHistoricalData(timeRange);
         loadSettings();
+        setLoading(false);
       } catch (error) {
         console.error('Authentication failed:', error);
+        setLoading(false);
         Alert.alert('Error', 'Failed to connect to database');
       }
     };
@@ -221,6 +239,7 @@ const IrrigationDashboard = () => {
     initFirebase();
 
     return () => {
+      // Clean up listeners
       const sensorRef = ref(irrigationDb, 'esp32/sensor_data');
       const histRef = ref(irrigationDb, 'esp32/historical_data');
       const settingsRef = ref(irrigationDb, 'esp32/settings');
@@ -282,7 +301,6 @@ const IrrigationDashboard = () => {
   
   const loadHistoricalData = (range: string) => {
     const historicalRef = ref(irrigationDb, 'esp32/historical_data');
-    
     
     onValue(historicalRef, (snapshot) => {
       const data = snapshot.val();
@@ -363,73 +381,425 @@ const IrrigationDashboard = () => {
   const renderChartData = (title: string, data: number[]) => {
     if (data.length === 0 || chartLabels.length === 0) {
       return (
-        <Text style={styles.loadingText}>{t.loading}</Text>
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>{title}</Text>
+          </View>
+          <View style={styles.cardContent}>
+            <ActivityIndicator size="small" color={COLORS.primary || "#2C5E1A"} />
+            <Text style={styles.loadingText}>{t.loading}</Text>
+          </View>
+        </View>
       );
     }
 
     return (
-      <Card style={styles.card}>
-        <Card.Content>
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>{title}</Text>
-          <ScrollView horizontal>
+        </View>
+        <View style={styles.cardContent}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.tableContainer}>
               <View style={styles.tableHeader}>
-                {chartLabels.slice(0, 5).map((label, index) => (
+                {chartLabels.map((label, index) => (
                   <Text key={index} style={styles.tableHeaderCell}>{label}</Text>
                 ))}
               </View>
               <View style={styles.tableRow}>
-                {data.slice(0, 5).map((value, index) => (
+                {data.map((value, index) => (
                   <Text key={index} style={styles.tableCell}>{value.toFixed(1)}</Text>
                 ))}
               </View>
             </View>
           </ScrollView>
-        </Card.Content>
-      </Card>
+        </View>
+      </View>
     );
   };
 
-  return (
-    <PaperProvider>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.headerContainer}>
-          <Text style={styles.dashboardTitle}>{t.title}</Text>
-          <TouchableOpacity onPress={() => setSettingsVisible(true)} style={styles.settingsButton}>
-            <Feather name="settings" size={24} color="#ffffff" />
+  const renderTimeRangeModal = () => (
+    <Modal
+      visible={timeRangeModalVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setTimeRangeModalVisible(false)}
+    >
+      <TouchableOpacity 
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={() => setTimeRangeModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{t.timeRange}</Text>
+            <TouchableOpacity onPress={() => setTimeRangeModalVisible(false)}>
+              <Ionicons name="close" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
+          
+          <TouchableOpacity 
+            style={[styles.modalOption, timeRange === '24h' && styles.selectedOption]}
+            onPress={() => {
+              setTimeRange('24h');
+              loadHistoricalData('24h');
+              setTimeRangeModalVisible(false);
+            }}
+          >
+            <Text style={[styles.modalOptionText, timeRange === '24h' && styles.selectedOptionText]}>
+              {t.lastDay}
+            </Text>
+            {timeRange === '24h' && <Ionicons name="checkmark" size={22} color={COLORS.primary || "#2C5E1A"} />}
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.modalOption, timeRange === '7d' && styles.selectedOption]}
+            onPress={() => {
+              setTimeRange('7d');
+              loadHistoricalData('7d');
+              setTimeRangeModalVisible(false);
+            }}
+          >
+            <Text style={[styles.modalOptionText, timeRange === '7d' && styles.selectedOptionText]}>
+              {t.lastWeek}
+            </Text>
+            {timeRange === '7d' && <Ionicons name="checkmark" size={22} color={COLORS.primary || "#2C5E1A"} />}
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.modalOption, timeRange === '30d' && styles.selectedOption]}
+            onPress={() => {
+              setTimeRange('30d');
+              loadHistoricalData('30d');
+              setTimeRangeModalVisible(false);
+            }}
+          >
+            <Text style={[styles.modalOptionText, timeRange === '30d' && styles.selectedOptionText]}>
+              {t.lastMonth}
+            </Text>
+            {timeRange === '30d' && <Ionicons name="checkmark" size={22} color={COLORS.primary || "#2C5E1A"} />}
           </TouchableOpacity>
         </View>
+      </TouchableOpacity>
+    </Modal>
+  );
 
-        <ScrollView style={styles.scrollView}>
-          {/* Summary Card */}
-          <Card style={styles.card}>
-            <Card.Content>
-              <Text style={styles.cardTitle}>{t.summary}</Text>
-              <View style={styles.averageCard}>
-                <View style={styles.averageItem}>
-                  <Text style={styles.averageLabel}>{t.avgTemperature}</Text>
-                  <Text style={styles.averageValue}>{summaryData.avgTemperature}</Text>
-                </View>
-                <View style={styles.averageItem}>
-                  <Text style={styles.averageLabel}>{t.avgHumidity}</Text>
-                  <Text style={styles.averageValue}>{summaryData.avgHumidity}</Text>
-                </View>
-                <View style={styles.averageItem}>
-                  <Text style={styles.averageLabel}>{t.avgMoisture}</Text>
-                  <Text style={styles.averageValue}>{summaryData.avgMoisture}</Text>
-                </View>
-                <View style={styles.averageItem}>
-                  <Text style={styles.averageLabel}>{t.rainPossibility}</Text>
-                  <Text style={styles.averageValue}>{summaryData.rainPossibility}</Text>
+  const renderBananaTypeModal = () => (
+    <Modal
+      visible={bananaTypeModalVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setBananaTypeModalVisible(false)}
+    >
+      <TouchableOpacity 
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={() => setBananaTypeModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{t.bananaType}</Text>
+            <TouchableOpacity onPress={() => setBananaTypeModalVisible(false)}>
+              <Ionicons name="close" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
+          
+          <TouchableOpacity 
+            style={[styles.modalOption, settings.bananaType === '1' && styles.selectedOption]}
+            onPress={() => {
+              setSettings({...settings, bananaType: '1'});
+              setBananaTypeModalVisible(false);
+            }}
+          >
+            <Text style={[styles.modalOptionText, settings.bananaType === '1' && styles.selectedOptionText]}>
+              Type 1
+            </Text>
+            {settings.bananaType === '1' && <Ionicons name="checkmark" size={22} color={COLORS.primary || "#2C5E1A"} />}
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.modalOption, settings.bananaType === '2' && styles.selectedOption]}
+            onPress={() => {
+              setSettings({...settings, bananaType: '2'});
+              setBananaTypeModalVisible(false);
+            }}
+          >
+            <Text style={[styles.modalOptionText, settings.bananaType === '2' && styles.selectedOptionText]}>
+              Type 2
+            </Text>
+            {settings.bananaType === '2' && <Ionicons name="checkmark" size={22} color={COLORS.primary || "#2C5E1A"} />}
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.modalOption, settings.bananaType === '3' && styles.selectedOption]}
+            onPress={() => {
+              setSettings({...settings, bananaType: '3'});
+              setBananaTypeModalVisible(false);
+            }}
+          >
+            <Text style={[styles.modalOptionText, settings.bananaType === '3' && styles.selectedOptionText]}>
+              Type 3
+            </Text>
+            {settings.bananaType === '3' && <Ionicons name="checkmark" size={22} color={COLORS.primary || "#2C5E1A"} />}
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
+  const renderCropStageModal = () => (
+    <Modal
+      visible={cropStageModalVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setCropStageModalVisible(false)}
+    >
+      <TouchableOpacity 
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={() => setCropStageModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{t.cropStage}</Text>
+            <TouchableOpacity onPress={() => setCropStageModalVisible(false)}>
+              <Ionicons name="close" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
+          
+          <TouchableOpacity 
+            style={[styles.modalOption, settings.cropStage === '1' && styles.selectedOption]}
+            onPress={() => {
+              setSettings({...settings, cropStage: '1'});
+              setCropStageModalVisible(false);
+            }}
+          >
+            <Text style={[styles.modalOptionText, settings.cropStage === '1' && styles.selectedOptionText]}>
+              Stage 1
+            </Text>
+            {settings.cropStage === '1' && <Ionicons name="checkmark" size={22} color={COLORS.primary || "#2C5E1A"} />}
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.modalOption, settings.cropStage === '2' && styles.selectedOption]}
+            onPress={() => {
+              setSettings({...settings, cropStage: '2'});
+              setCropStageModalVisible(false);
+            }}
+          >
+            <Text style={[styles.modalOptionText, settings.cropStage === '2' && styles.selectedOptionText]}>
+              Stage 2
+            </Text>
+            {settings.cropStage === '2' && <Ionicons name="checkmark" size={22} color={COLORS.primary || "#2C5E1A"} />}
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.modalOption, settings.cropStage === '3' && styles.selectedOption]}
+            onPress={() => {
+              setSettings({...settings, cropStage: '3'});
+              setCropStageModalVisible(false);
+            }}
+          >
+            <Text style={[styles.modalOptionText, settings.cropStage === '3' && styles.selectedOptionText]}>
+              Stage 3
+            </Text>
+            {settings.cropStage === '3' && <Ionicons name="checkmark" size={22} color={COLORS.primary || "#2C5E1A"} />}
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
+  const renderSettingsModal = () => (
+    <Modal
+      visible={settingsVisible}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setSettingsVisible(false)}
+    >
+      <SafeAreaView style={styles.settingsModalOverlay}>
+        <View style={styles.settingsModalContainer}>
+          <View style={styles.settingsModalHeader}>
+            <Text style={styles.settingsModalTitle}>{t.settings}</Text>
+            <TouchableOpacity 
+              onPress={() => setSettingsVisible(false)}
+              style={styles.closeButton}
+            >
+              <Ionicons name="close" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.settingsScrollView}>
+            <View style={styles.settingGroup}>
+              <Text style={styles.settingLabel}>{t.bananaType}</Text>
+              <TouchableOpacity 
+                style={styles.settingButton}
+                onPress={() => setBananaTypeModalVisible(true)}
+              >
+                <Text style={styles.settingButtonText}>Type {settings.bananaType}</Text>
+                <Ionicons name="chevron-down" size={20} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.settingGroup}>
+              <Text style={styles.settingLabel}>{t.cropStage}</Text>
+              <TouchableOpacity 
+                style={styles.settingButton}
+                onPress={() => setCropStageModalVisible(true)}
+              >
+                <Text style={styles.settingButtonText}>Stage {settings.cropStage}</Text>
+                <Ionicons name="chevron-down" size={20} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.settingGroup}>
+              <View style={styles.settingRow}>
+                <Text style={styles.settingLabel}>{t.operationMode}</Text>
+                <View style={styles.toggleContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleOption,
+                      !settings.operationMode && styles.toggleOptionSelected
+                    ]}
+                    onPress={() => setSettings({...settings, operationMode: false})}
+                  >
+                    <Text style={[
+                      styles.toggleOptionText,
+                      !settings.operationMode && styles.toggleOptionTextSelected
+                    ]}>
+                      {t.manual}
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleOption,
+                      settings.operationMode && styles.toggleOptionSelected
+                    ]}
+                    onPress={() => setSettings({...settings, operationMode: true})}
+                  >
+                    <Text style={[
+                      styles.toggleOptionText,
+                      settings.operationMode && styles.toggleOptionTextSelected
+                    ]}>
+                      {t.auto}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </View>
-            </Card.Content>
-          </Card>
+            </View>
+            
+            <View style={styles.settingGroup}>
+              <View style={styles.settingRow}>
+                <Text style={styles.settingLabel}>{t.testMode}</Text>
+                <View style={styles.toggleContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleOption,
+                      !settings.testMode && styles.toggleOptionSelected
+                    ]}
+                    onPress={() => setSettings({...settings, testMode: false})}
+                  >
+                    <Text style={[
+                      styles.toggleOptionText,
+                      !settings.testMode && styles.toggleOptionTextSelected
+                    ]}>
+                      {t.off}
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleOption,
+                      settings.testMode && styles.toggleOptionSelected
+                    ]}
+                    onPress={() => setSettings({...settings, testMode: true})}
+                  >
+                    <Text style={[
+                      styles.toggleOptionText,
+                      settings.testMode && styles.toggleOptionTextSelected
+                    ]}>
+                      {t.on}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+            
+            <View style={styles.buttonGroup}>
+              <TouchableOpacity 
+                style={styles.cancelButton}
+                onPress={() => setSettingsVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>{t.cancel}</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.saveButton}
+                onPress={saveSettings}
+              >
+                <Text style={styles.saveButtonText}>{t.save}</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+      </SafeAreaView>
+    </Modal>
+  );
 
-          <Card style={styles.card}>
-            <Card.Content>
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>{t.title}</Text>
+        <TouchableOpacity 
+          style={styles.settingsButton} 
+          onPress={() => setSettingsVisible(true)}
+        >
+          <Feather name="settings" size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary || "#2C5E1A"} />
+          <Text style={styles.loadingText}>{t.loading}</Text>
+        </View>
+      ) : (
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+          {/* Summary Card */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>{t.summary}</Text>
+            </View>
+            <View style={styles.cardContent}>
+              <View style={styles.summaryGrid}>
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryLabel}>{t.avgTemperature}</Text>
+                  <Text style={styles.summaryValue}>{summaryData.avgTemperature}</Text>
+                </View>
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryLabel}>{t.avgHumidity}</Text>
+                  <Text style={styles.summaryValue}>{summaryData.avgHumidity}</Text>
+                </View>
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryLabel}>{t.avgMoisture}</Text>
+                  <Text style={styles.summaryValue}>{summaryData.avgMoisture}</Text>
+                </View>
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryLabel}>{t.rainPossibility}</Text>
+                  <Text style={styles.summaryValue}>{summaryData.rainPossibility}</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Sensor Data Card */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>{t.sensorData}</Text>
-              <ScrollView horizontal>
+            </View>
+            <View style={styles.cardContent}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.tableContainer}>
                   <View style={styles.tableHeader}>
                     <Text style={styles.tableHeaderCell}>{t.module}</Text>
@@ -442,12 +812,23 @@ const IrrigationDashboard = () => {
 
                   {sensorData.length > 0 ? (
                     sensorData.map((row, index) => (
-                      <View key={index} style={styles.tableRow}>
+                      <View key={index} style={[
+                        styles.tableRow, 
+                        index % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd
+                      ]}>
                         <Text style={styles.tableCell}>{row.module}</Text>
-                        <Text style={[styles.tableCell, styles.numericCell]}>{row.battery?.toFixed(1)}</Text>
-                        <Text style={[styles.tableCell, styles.numericCell]}>{row.humidity?.toFixed(1)}</Text>
-                        <Text style={[styles.tableCell, styles.numericCell]}>{row.moisture?.toFixed(1)}</Text>
-                        <Text style={[styles.tableCell, styles.numericCell]}>{row.temperature?.toFixed(1)}</Text>
+                        <Text style={[styles.tableCell, styles.numericCell]}>
+                          {row.battery?.toFixed(1)}
+                        </Text>
+                        <Text style={[styles.tableCell, styles.numericCell]}>
+                          {row.humidity?.toFixed(1)}
+                        </Text>
+                        <Text style={[styles.tableCell, styles.numericCell]}>
+                          {row.moisture?.toFixed(1)}
+                        </Text>
+                        <Text style={[styles.tableCell, styles.numericCell]}>
+                          {row.temperature?.toFixed(1)}
+                        </Text>
                         <Text style={styles.tableCell}>{row.timestamp}</Text>
                       </View>
                     ))
@@ -458,215 +839,59 @@ const IrrigationDashboard = () => {
                   )}
                 </View>
               </ScrollView>
-            </Card.Content>
-          </Card>
-
-          {/* Time Range Selector */}
-          <View style={styles.controls}>
-            <Menu
-              visible={menuVisible === true}
-              onDismiss={() => setMenuVisible(false)}
-              anchor={
-                <Button 
-                  mode="outlined" 
-                  onPress={() => setMenuVisible(true)}
-                  style={styles.timeRangeButton}
-                  icon="refresh"
-                >
-                  {timeRange === '24h' ? t.lastDay : timeRange === '7d' ? t.lastWeek : t.lastMonth}
-                </Button>
-              }
-            >
-              <Menu.Item 
-                onPress={() => {
-                  setTimeRange('24h');
-                  loadHistoricalData('24h');
-                  setMenuVisible(false);
-                }} 
-                title={t.lastDay} 
-              />
-              <Menu.Item 
-                onPress={() => {
-                  setTimeRange('7d');
-                  loadHistoricalData('7d');
-                  setMenuVisible(false);
-                }} 
-                title={t.lastWeek} 
-              />
-              <Menu.Item 
-                onPress={() => {
-                  setTimeRange('30d');
-                  loadHistoricalData('30d');
-                  setMenuVisible(false);
-                }} 
-                title={t.lastMonth} 
-              />
-            </Menu>
+            </View>
           </View>
 
-          {/* Charts (replaced with data tables) */}
+          {/* Time Range Selector */}
+          <View style={styles.timeRangeContainer}>
+            <TouchableOpacity 
+              style={styles.timeRangeButton}
+              onPress={() => setTimeRangeModalVisible(true)}
+            >
+              <Ionicons name="calendar-outline" size={22} color="#fff" style={styles.timeRangeIcon} />
+              <Text style={styles.timeRangeText}>
+                {timeRange === '24h' ? t.lastDay : timeRange === '7d' ? t.lastWeek : t.lastMonth}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Historical Data Charts */}
           {renderChartData(t.temperatureHistory, temperatureData)}
           {renderChartData(t.humidityHistory, humidityData)}
           {renderChartData(t.moistureHistory, moistureData)}
         </ScrollView>
+      )}
 
-        {/* Settings Modal */}
-        <Portal>
-          <Modal
-            visible={settingsVisible}
-            onDismiss={() => setSettingsVisible(false)}
-            contentContainerStyle={styles.modalContent}
-          >
-            <Text style={styles.modalTitle}>{t.settings}</Text>
-            
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>{t.bananaType}</Text>
-              <Menu
-                visible={menuVisible === 'bananaType'}
-                onDismiss={() => setMenuVisible(false)}
-                anchor={
-                  <Button 
-                    mode="outlined" 
-                    onPress={() => setMenuVisible('bananaType')}
-                    style={styles.selectButton}
-                  >
-                    Type {settings.bananaType}
-                  </Button>
-                }
-              >
-                <Menu.Item 
-                  onPress={() => {
-                    setSettings({...settings, bananaType: '1'});
-                    setMenuVisible(false);
-                  }} 
-                  title="Type 1" 
-                />
-                <Menu.Item 
-                  onPress={() => {
-                    setSettings({...settings, bananaType: '2'});
-                    setMenuVisible(false);
-                  }} 
-                  title="Type 2" 
-                />
-                <Menu.Item 
-                  onPress={() => {
-                    setSettings({...settings, bananaType: '3'});
-                    setMenuVisible(false);
-                  }} 
-                  title="Type 3" 
-                />
-              </Menu>
-            </View>
-            
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>{t.cropStage}</Text>
-              <Menu
-                visible={menuVisible === 'cropStage'}
-                onDismiss={() => setMenuVisible(false)}
-                anchor={
-                  <Button 
-                    mode="outlined" 
-                    onPress={() => setMenuVisible('cropStage')}
-                    style={styles.selectButton}
-                  >
-                    Stage {settings.cropStage}
-                  </Button>
-                }
-              >
-                <Menu.Item 
-                  onPress={() => {
-                    setSettings({...settings, cropStage: '1'});
-                    setMenuVisible(false);
-                  }} 
-                  title="Stage 1" 
-                />
-                <Menu.Item 
-                  onPress={() => {
-                    setSettings({...settings, cropStage: '2'});
-                    setMenuVisible(false);
-                  }} 
-                  title="Stage 2" 
-                />
-                <Menu.Item 
-                  onPress={() => {
-                    setSettings({...settings, cropStage: '3'});
-                    setMenuVisible(false);
-                  }} 
-                  title="Stage 3" 
-                />
-              </Menu>
-            </View>
-            
-            <View style={styles.formGroup}>
-              <View style={styles.modeLabel}>
-                <Text style={styles.formLabel}>{t.operationMode}</Text>
-                <View style={styles.modeStatus}>
-                  <Switch
-                    value={settings.operationMode}
-                    onValueChange={(value) => setSettings({...settings, operationMode: value})}
-                    color="#2196f3"
-                  />
-                  <Text style={styles.statusText}>
-                    {settings.operationMode ? t.auto : t.manual}
-                  </Text>
-                </View>
-              </View>
-            </View>
-            
-            <View style={styles.formGroup}>
-              <View style={styles.modeLabel}>
-                <Text style={styles.formLabel}>{t.testMode}</Text>
-                <View style={styles.modeStatus}>
-                  <Switch
-                    value={settings.testMode}
-                    onValueChange={(value) => setSettings({...settings, testMode: value})}
-                    color="#2196f3"
-                  />
-                  <Text style={styles.statusText}>
-                    {settings.testMode ? t.on : t.off}
-                  </Text>
-                </View>
-              </View>
-            </View>
-            
-            <View style={styles.buttonGroup}>
-              <Button 
-                mode="outlined" 
-                onPress={() => setSettingsVisible(false)}
-                style={styles.cancelButton}
-              >
-                {t.cancel}
-              </Button>
-              <Button 
-                mode="contained" 
-                onPress={saveSettings}
-                style={styles.saveButton}
-              >
-                {t.save}
-              </Button>
-            </View>
-          </Modal>
-        </Portal>
-      </SafeAreaView>
-    </PaperProvider>
+      {/* Modals */}
+      {renderTimeRangeModal()}
+      {renderBananaTypeModal()}
+      {renderCropStageModal()}
+      {renderSettingsModal()}
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8f9fa',
   },
-  headerContainer: {
-    backgroundColor: '#2196f3',
-    paddingVertical: 20,
-    paddingHorizontal: 15,
+  header: {
+    backgroundColor: '#2C5E1A',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
   },
-  dashboardTitle: {
-    color: '#ffffff',
+  headerTitle: {
+    color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
     flex: 1,
@@ -681,61 +906,88 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    padding: 15,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 24,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
   card: {
-    marginBottom: 20,
-    borderRadius: 10,
-    elevation: 4,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginBottom: 16,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  cardHeader: {
+    backgroundColor: '#f5f5f5',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2196f3',
-    marginBottom: 15,
+    color: '#2C5E1A',
     textAlign: 'center',
   },
-  averageCard: {
+  cardContent: {
+    padding: 16,
+  },
+  summaryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginHorizontal: -5,
+    marginHorizontal: -4,
   },
-  averageItem: {
+  summaryItem: {
     width: '48%',
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#f5f5f5',
     borderRadius: 8,
-    padding: 15,
-    marginBottom: 10,
+    padding: 12,
+    marginBottom: 8,
+    marginHorizontal: 4,
     alignItems: 'center',
-    elevation: 2,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
   },
-  averageLabel: {
-    fontSize: 12,
+  summaryLabel: {
+    fontSize: 14,
     color: '#666',
-    marginBottom: 5,
+    marginBottom: 4,
+    textAlign: 'center',
   },
-  averageValue: {
-    fontSize: 16,
-    color: '#2196f3',
+  summaryValue: {
+    fontSize: 18,
     fontWeight: 'bold',
-  },
-  controls: {
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  timeRangeButton: {
-    width: 200,
+    color: '#2C5E1A',
   },
   tableContainer: {
     minWidth: Dimensions.get('window').width - 60,
-    marginVertical: 10,
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#2196f3',
-    borderTopLeftRadius: 5,
-    borderTopRightRadius: 5,
+    backgroundColor: '#2C5E1A',
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
     padding: 10,
   },
   tableHeaderCell: {
@@ -751,13 +1003,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#e0e0e0',
     padding: 10,
+  },
+  tableRowEven: {
     backgroundColor: '#fff',
+  },
+  tableRowOdd: {
+    backgroundColor: '#f9f9f9',
   },
   tableCell: {
     flex: 1,
     textAlign: 'center',
     paddingHorizontal: 10,
     minWidth: 80,
+    fontSize: 14,
+    color: '#333',
   },
   numericCell: {
     textAlign: 'right',
@@ -766,58 +1025,200 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     flex: 6,
   },
-  modalContent: {
-    backgroundColor: 'white',
+  timeRangeContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  timeRangeButton: {
+    backgroundColor: '#2C5E1A',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1,
+  },
+  timeRangeIcon: {
+    marginRight: 8,
+  },
+  timeRangeText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
     padding: 20,
-    margin: 20,
-    borderRadius: 10,
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2196f3',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  formGroup: {
-    marginBottom: 20,
-  },
-  formLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-  },
-  selectButton: {
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
     width: '100%',
   },
-  modeLabel: {
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    paddingBottom: 12,
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  modalOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  selectedOption: {
+    backgroundColor: '#f0f9f0',
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  selectedOptionText: {
+    color: '#2C5E1A',
+    fontWeight: 'bold',
+  },
+  settingsModalOverlay: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  settingsModalContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  settingsModalHeader: {
+    backgroundColor: '#2C5E1A',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  modeStatus: {
-    flexDirection: 'row',
+  settingsModalTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  statusText: {
-    marginLeft: 10,
-    color: '#2196f3',
-    fontWeight: '500',
+  settingsScrollView: {
+    flex: 1,
+    padding: 16,
+  },
+  settingGroup: {
+    marginBottom: 20,
+  },
+  settingLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  settingButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#f5f5f5',
+  },
+  settingButtonText: {
+    fontSize: 16,
+    color: '#2C5E1A',
+  },
+  settingRow: {
+    marginBottom: 8,
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  toggleOption: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  toggleOptionSelected: {
+    backgroundColor: '#2C5E1A',
+  },
+  toggleOptionText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  toggleOptionTextSelected: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
   buttonGroup: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 20,
-    gap: 10,
-  },
-  saveButton: {
-    backgroundColor: '#2196f3',
+    justifyContent: 'space-between',
+    marginTop: 24,
   },
   cancelButton: {
+    flex: 1,
+    marginRight: 8,
+    padding: 14,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+    borderWidth: 1,
     borderColor: '#e0e0e0',
   },
-  loadingText: {
-    textAlign: 'center',
-    padding: 20,
+  saveButton: {
+    flex: 1,
+    marginLeft: 8,
+    padding: 14,
+    borderRadius: 8,
+    backgroundColor: '#2C5E1A',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '600',
+  },
+  saveButtonText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });

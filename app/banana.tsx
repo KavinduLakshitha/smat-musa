@@ -1,23 +1,34 @@
 import React, { useState } from "react";
-import { View, Image, Alert, ActivityIndicator, SafeAreaView, StyleSheet } from "react-native";
-import { Button, Text, Card } from "react-native-paper";
+import { 
+  View, 
+  Image, 
+  Alert, 
+  ActivityIndicator, 
+  SafeAreaView, 
+  StyleSheet, 
+  TouchableOpacity, 
+  Text,
+  ScrollView,
+  Platform 
+} from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
 import { useLanguage } from "../LanguageContext";
 import { Stack } from "expo-router";
+import { COLORS } from '@/constants/Colors';
 
 export default function BananaRoute() {
-    return (
-      <>        
-        <Stack.Screen 
-          options={{
-            title: "Banana Classification",
-            headerBackTitle: "Home"
-          }} 
-        />
-        <BananaScreen />
-      </>
-    );
+  return (
+    <>        
+      <Stack.Screen 
+        options={{
+          title: "Banana Classification",
+          headerBackTitle: "Home"
+        }} 
+      />
+      <BananaScreen />
+    </>
+  );
 }
 
 const BananaScreen = () => {
@@ -35,9 +46,10 @@ const BananaScreen = () => {
   const translations = {
     en: {
       title: "Banana Classification",
-      pickImage: "Pick Image",
-      takePhoto: "Take Photo",
-      classifyImage: "Classify Image",
+      subtitle: "Upload a photo to identify the ripeness level",
+      pickImage: "Pick Image from Gallery",
+      takePhoto: "Take Photo with Camera",
+      classifyImage: "Classify Banana Image",
       noImage: "No Image",
       noImageMsg: "Please select or capture an image first.",
       prediction: "Prediction",
@@ -59,9 +71,10 @@ const BananaScreen = () => {
     },
     si: {
       title: "කෙසෙල් වර්ගීකරණය",
-      pickImage: "පින්තූරයක් තෝරන්න",
-      takePhoto: "ඡායාරූපයක් ගන්න",
-      classifyImage: "පින්තූරය වර්ගීකරණය කරන්න",
+      subtitle: "පරිණත මට්ටම හඳුනා ගැනීමට ඡායාරූපයක් උඩුගත කරන්න",
+      pickImage: "ගැලරියෙන් පින්තූරයක් තෝරන්න",
+      takePhoto: "කැමරාවෙන් ඡායාරූපයක් ගන්න",
+      classifyImage: "කෙසෙල් පින්තූරය වර්ගීකරණය කරන්න",
       noImage: "පින්තූරයක් නැත",
       noImageMsg: "කරුණාකර පින්තූරයක් තෝරන්න හෝ ගන්න.",
       prediction: "ඵල දැක්වීම",
@@ -84,6 +97,7 @@ const BananaScreen = () => {
   };
 
   const t = translations[language as keyof typeof translations] || translations.en;
+  
   const pickImage = async () => {
     console.log("Picking image...");
     
@@ -186,54 +200,111 @@ const BananaScreen = () => {
     }
   };
 
+  const getClassificationColor = (resultClass: string) => {
+    const lowerClass = resultClass.toLowerCase();
+    switch (lowerClass) {
+      case 'unripe':
+        return '#77cc66'; // Green
+      case 'ripe':
+        return '#ffcc44'; // Yellow
+      case 'overripe':
+        return '#ee8833'; // Orange
+      case 'rotten':
+        return '#cc4433'; // Red
+      default:
+        return '#888888'; // Gray
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <Card style={{ padding: 20, borderRadius: 10, width: '90%' }}>
-          <Card.Content>
-            {image && (
-              <Image
-                source={{ uri: image }}
-                style={{ width: '100%', height: 250, borderRadius: 10, marginVertical: 20 }}
-              />
-            )}
-
-            <Button mode="contained" onPress={pickImage} style={{ marginBottom: 10 }}>
-              {t.pickImage}
-            </Button>
-            <Button mode="contained" onPress={takePhoto} style={{ marginBottom: 10 }}>
-              {t.takePhoto}
-            </Button>
-
-            {loading ? (
-              <ActivityIndicator size="large" color="#6200ea" style={{ marginVertical: 10 }} />
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.container}>
+          <View style={styles.card}>
+            <Text style={styles.title}>{t.title}</Text>
+            <Text style={styles.subtitle}>{t.subtitle}</Text>
+            
+            {image ? (
+              <View style={styles.imageContainer}>
+                <Image
+                  source={{ uri: image }}
+                  style={styles.image}
+                  resizeMode="cover"
+                />
+              </View>
             ) : (
-              <Button
-                mode="contained"
-                onPress={() => classifyImage()}
-                disabled={!image}
-                style={{ marginBottom: 10 }}
-              >
-                {t.classifyImage}
-              </Button>
-            )}
-
-            {result && (
-              <View style={{ marginTop: 20 }}>
-                <Text style={styles.resultText}>
-                  {t.prediction}: {result.predicted_class}
-                </Text>
-                <Text style={styles.resultText}>
-                  {t.confidence}: {result.confidence}
-                </Text>
-                <Text style={styles.resultText}>
-                  {t.shelfLife}: {result.shelf_life}
-                </Text>
+              <View style={styles.placeholderContainer}>
+                <View style={styles.imagePlaceholder}>
+                  <Text style={styles.placeholderText}>🍌</Text>
+                </View>
               </View>
             )}
-          </Card.Content>
-        </Card>
-      </View>
+
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity 
+                style={[styles.button, styles.galleryButton]} 
+                onPress={pickImage}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>{t.pickImage}</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.button, styles.cameraButton]} 
+                onPress={takePhoto}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>{t.takePhoto}</Text>
+              </TouchableOpacity>
+              
+              {loading ? (
+                <View style={[styles.button, styles.classifyButton, styles.loadingButton]}>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={[styles.buttonText, styles.loadingText]}>Analyzing...</Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[
+                    styles.button, 
+                    styles.classifyButton,
+                    !image && styles.disabledButton
+                  ]}
+                  onPress={() => classifyImage()}
+                  disabled={!image}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.buttonText}>{t.classifyImage}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {result && (
+              <View style={styles.resultContainer}>
+                <View style={[
+                  styles.resultHeader,
+                  { backgroundColor: getClassificationColor(result.predicted_class) }
+                ]}>
+                  <Text style={styles.resultHeaderText}>{result.predicted_class}</Text>
+                </View>
+                
+                <View style={styles.resultDetails}>
+                  <View style={styles.resultRow}>
+                    <Text style={styles.resultLabel}>{t.confidence}:</Text>
+                    <Text style={styles.resultValue}>{result.confidence}</Text>
+                  </View>
+                  
+                  <View style={styles.divider} />
+                  
+                  <View style={styles.resultRow}>
+                    <Text style={styles.resultLabel}>{t.shelfLife}:</Text>
+                    <Text style={styles.resultValue}>{result.shelf_life}</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+          </View>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -241,16 +312,162 @@ const BananaScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingVertical: 20,
   },
   container: {
     flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  card: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: COLORS.primary || '#3a86ff',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  imageContainer: {
+    width: '100%',
+    height: 250,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#f0f0f0',
+    marginBottom: 20,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  placeholderContainer: {
     width: '100%',
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: 20,
+    marginBottom: 20,
   },
-  resultText: {
+  imagePlaceholder: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+    borderStyle: 'dashed',
+  },
+  placeholderText: {
+    fontSize: 64,
+  },
+  buttonContainer: {
+    width: '100%',
+    gap: 12,
+  },
+  button: {
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+  },
+  galleryButton: {
+    backgroundColor: '#6c5ce7',
+  },
+  cameraButton: {
+    backgroundColor: '#00b894',
+  },
+  classifyButton: {
+    backgroundColor: COLORS.primary || '#3a86ff',
+    marginTop: 4,
+  },
+  disabledButton: {
+    backgroundColor: '#bdc3c7',
+  },
+  loadingButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
     fontSize: 16,
-    marginBottom: 5,
-  }
+  },
+  loadingText: {
+    marginLeft: 8,
+  },
+  resultContainer: {
+    marginTop: 24,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  resultHeader: {
+    padding: 12,
+    alignItems: 'center',
+  },
+  resultHeaderText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  resultDetails: {
+    padding: 16,
+    backgroundColor: '#fff',
+  },
+  resultRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  resultLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  resultValue: {
+    fontSize: 16,
+    color: '#555',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#eee',
+    marginVertical: 8,
+  },
 });

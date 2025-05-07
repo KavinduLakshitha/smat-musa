@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
-import { Button, Card, TextInput, Snackbar } from 'react-native-paper';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  ActivityIndicator, 
+  TouchableOpacity, 
+  TextInput,
+  SafeAreaView,
+  Platform,
+  KeyboardAvoidingView
+} from 'react-native';
 import { Stack } from 'expo-router';
 import { COLORS } from '@/constants/Colors';
 import { getPricePredictor, testApiConnection } from '@/services/api';
@@ -108,154 +118,187 @@ const PredictionScreen = () => {
     }
   };
 
+  const dismissSnackbar = () => {
+    setSnackbarVisible(false);
+  };
+
   return (
-    <ScrollView style={styles.container}>
-      {apiStatus === 'disconnected' && !checkingApi && (
-        <Card style={[styles.card, styles.errorCard]}>
-          <Card.Content>
-            <Text style={styles.errorText}>
-              Cannot connect to the API server at http://192.168.8.162:5000
-            </Text>
-            <Text style={styles.errorHelpText}>
-              Please ensure the server is running and your device is on the same network.
-            </Text>
-            <Button 
-              mode="outlined" 
-              onPress={() => {
-                setApiStatus('unknown');
-                setCheckingApi(true);
-                testApiConnection()
-                  .then(() => setApiStatus('connected'))
-                  .catch(() => {
-                    setApiStatus('disconnected');
-                    setError('Still cannot connect to API server.');
-                    setSnackbarVisible(true);
-                  })
-                  .finally(() => setCheckingApi(false));
-              }} 
-              style={styles.retryButton}
-            >
-              Retry Connection
-            </Button>
-          </Card.Content>
-        </Card>
-      )}
-
-      <Card style={styles.card}>
-        <Card.Title title="Banana Price Predictor" />
-        <Card.Content>
-          <TextInput
-            label="Location"
-            value={location}
-            onChangeText={text => setLocation(text)}
-            style={styles.input}
-            mode="outlined"
-            placeholder="e.g., Colombo, Kandy, Galle"
-            disabled={apiStatus === 'disconnected' || loading}
-          />
-
-          <TextInput
-            label="Banana Type"
-            value={bananaType}
-            onChangeText={text => setBananaType(text)}
-            style={styles.input}
-            mode="outlined"
-            placeholder="e.g., ambul, kolikuttu, anamalu, seeni, rathkesel"
-            disabled={apiStatus === 'disconnected' || loading}
-          />
-
-          <TextInput
-            label="Quantity (kg, optional)"
-            value={quantity}
-            onChangeText={text => setQuantity(text)}
-            keyboardType="numeric"
-            style={styles.input}
-            mode="outlined"
-            disabled={apiStatus === 'disconnected' || loading}
-          />
-
-          <Button 
-            mode="contained" 
-            onPress={predictPrice} 
-            style={styles.button}
-            loading={loading}
-            disabled={apiStatus === 'disconnected' || loading || checkingApi}
-          >
-            {loading ? 'Predicting...' : 'Predict Price'}
-          </Button>
-        </Card.Content>
-      </Card>
-
-      {prediction && (
-        <Card style={styles.resultCard}>
-          <Card.Title title="Price Prediction Results" />
-          <Card.Content>
-            <View style={styles.resultItem}>
-              <Text style={styles.resultLabel}>Predicted Price:</Text>
-              <Text style={styles.resultValue}>
-                {prediction.predicted_price.toFixed(2)} {prediction.currency}/kg
-              </Text>
-            </View>
-            
-            {quantity && (
-              <View style={styles.resultItem}>
-                <Text style={styles.resultLabel}>Total Value:</Text>
-                <Text style={styles.resultValue}>
-                  {(prediction.predicted_price * parseInt(quantity || '0')).toFixed(2)} {prediction.currency}
-                </Text>
-              </View>
-            )}
-            
-            <View style={styles.resultItem}>
-              <Text style={styles.resultLabel}>Date:</Text>
-              <Text style={styles.resultValue}>
-                {prediction.date}
-              </Text>
-            </View>
-
-            {prediction.features_used && (
-              <View style={styles.featuresContainer}>
-                <Text style={styles.featuresTitle}>Features Used for Prediction:</Text>
-                {Object.entries(prediction.features_used).map(([key, value]) => (
-                  <View key={key} style={styles.featureItem}>
-                    <Text style={styles.featureLabel}>{key}:</Text>
-                    <Text style={styles.featureValue}>{value.toString()}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </Card.Content>
-        </Card>
-      )}
-
-      <Snackbar
-        visible={snackbarVisible}
-        onDismiss={() => setSnackbarVisible(false)}
-        action={{
-          label: 'OK',
-          onPress: () => setSnackbarVisible(false),
-        }}
-        duration={5000}
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        {error}
-      </Snackbar>
-    </ScrollView>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {apiStatus === 'disconnected' && !checkingApi && (
+            <View style={styles.errorCard}>
+              <Text style={styles.errorText}>
+                Cannot connect to the API server
+              </Text>
+              <Text style={styles.errorHelpText}>
+                Please ensure the server is running and your device is on the same network.
+              </Text>
+              <TouchableOpacity 
+                style={styles.retryButton}
+                onPress={() => {
+                  setApiStatus('unknown');
+                  setCheckingApi(true);
+                  testApiConnection()
+                    .then(() => setApiStatus('connected'))
+                    .catch(() => {
+                      setApiStatus('disconnected');
+                      setError('Still cannot connect to API server.');
+                      setSnackbarVisible(true);
+                    })
+                    .finally(() => setCheckingApi(false));
+                }}
+              >
+                <Text style={styles.retryButtonText}>Retry Connection</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <View style={styles.formCard}>
+            <Text style={styles.cardTitle}>Banana Price Predictor</Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Location</Text>
+              <TextInput
+                style={styles.input}
+                value={location}
+                onChangeText={text => setLocation(text)}
+                placeholder="e.g., Colombo, Kandy, Galle"
+                placeholderTextColor="#888"
+                editable={!(apiStatus === 'disconnected' || loading)}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Banana Type</Text>
+              <TextInput
+                style={styles.input}
+                value={bananaType}
+                onChangeText={text => setBananaType(text)}
+                placeholder="e.g., ambul, kolikuttu, anamalu, seeni, rathkesel"
+                placeholderTextColor="#888"
+                editable={!(apiStatus === 'disconnected' || loading)}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Quantity (kg, optional)</Text>
+              <TextInput
+                style={styles.input}
+                value={quantity}
+                onChangeText={text => setQuantity(text)}
+                keyboardType="numeric"
+                placeholder="Enter quantity in kg"
+                placeholderTextColor="#888"
+                editable={!(apiStatus === 'disconnected' || loading)}
+              />
+            </View>
+
+            <TouchableOpacity 
+              style={[
+                styles.predictButton,
+                (apiStatus === 'disconnected' || loading || checkingApi) && styles.predictButtonDisabled
+              ]}
+              onPress={predictPrice}
+              disabled={apiStatus === 'disconnected' || loading || checkingApi}
+            >
+              {loading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={styles.predictButtonText}>Predicting...</Text>
+                </View>
+              ) : (
+                <Text style={styles.predictButtonText}>Predict Price</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {prediction && (
+            <View style={styles.resultCard}>
+              <Text style={styles.cardTitle}>Price Prediction Results</Text>
+              
+              <View style={styles.resultContainer}>
+                <View style={styles.resultRow}>
+                  <Text style={styles.resultLabel}>Predicted Price:</Text>
+                  <Text style={styles.resultValue}>
+                    {prediction.predicted_price.toFixed(2)} {prediction.currency}/kg
+                  </Text>
+                </View>
+                
+                {quantity && (
+                  <View style={styles.resultRow}>
+                    <Text style={styles.resultLabel}>Total Value:</Text>
+                    <Text style={styles.resultValue}>
+                      {(prediction.predicted_price * parseInt(quantity || '0')).toFixed(2)} {prediction.currency}
+                    </Text>
+                  </View>
+                )}
+                
+                <View style={styles.resultRow}>
+                  <Text style={styles.resultLabel}>Date:</Text>
+                  <Text style={styles.resultValue}>
+                    {prediction.date}
+                  </Text>
+                </View>
+              </View>
+
+              {prediction.features_used && (
+                <View style={styles.featuresContainer}>
+                  <Text style={styles.featuresTitle}>Features Used for Prediction:</Text>
+                  {Object.entries(prediction.features_used).map(([key, value]) => (
+                    <View key={key} style={styles.featureRow}>
+                      <Text style={styles.featureLabel}>{key}:</Text>
+                      <Text style={styles.featureValue}>{value.toString()}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Custom Snackbar */}
+        {snackbarVisible && (
+          <View style={styles.snackbar}>
+            <Text style={styles.snackbarText}>{error}</Text>
+            <TouchableOpacity onPress={dismissSnackbar}>
+              <Text style={styles.snackbarAction}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
   container: {
     flex: 1,
-    padding: 16,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#f8f9fa',
   },
-  card: {
-    marginBottom: 16,
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 32,
   },
   errorCard: {
     backgroundColor: '#fff8e1',
+    borderRadius: 12,
     borderLeftWidth: 4,
     borderLeftColor: '#ff9800',
+    padding: 16,
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   errorText: {
     fontSize: 16,
@@ -265,58 +308,162 @@ const styles = StyleSheet.create({
   },
   errorHelpText: {
     fontSize: 14,
+    color: '#555',
     marginBottom: 16,
   },
   retryButton: {
-    marginTop: 8,
+    backgroundColor: '#ff9800',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignSelf: 'flex-start',
   },
-  input: {
-    marginBottom: 12,
+  retryButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
-  button: {
-    marginTop: 16,
-    paddingVertical: 8,
+  formCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
-  resultCard: {
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.text || '#333',
     marginBottom: 16,
   },
-  resultItem: {
+  inputContainer: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+    marginBottom: 6,
+  },
+  input: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e1e4e8',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+  },
+  predictButton: {
+    backgroundColor: COLORS.primary || '#3a86ff',
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  predictButtonDisabled: {
+    backgroundColor: '#c5c9cc',
+  },
+  predictButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resultCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  resultContainer: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    paddingBottom: 16,
+    marginBottom: 16,
+  },
+  resultRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   resultLabel: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.text || '#333',
   },
   resultValue: {
     fontSize: 16,
-    color: COLORS.primary,
+    color: COLORS.primary || '#3a86ff',
     fontWeight: 'bold',
   },
   featuresContainer: {
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8f9fa',
     borderRadius: 8,
+    padding: 12,
   },
   featuresTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: 'bold',
-    marginBottom: 8,
+    color: '#555',
+    marginBottom: 10,
   },
-  featureItem: {
+  featureRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 4,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
   featureLabel: {
     fontSize: 14,
-    color: COLORS.text,
+    color: '#555',
   },
   featureValue: {
     fontSize: 14,
-    fontFamily: 'monospace',
+    color: '#333',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  snackbar: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    right: 16,
+    backgroundColor: 'rgba(50, 50, 50, 0.9)',
+    borderRadius: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  snackbarText: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 14,
+  },
+  snackbarAction: {
+    color: '#a5d6ff',
+    fontWeight: 'bold',
+    fontSize: 14,
+    marginLeft: 16,
   },
 });

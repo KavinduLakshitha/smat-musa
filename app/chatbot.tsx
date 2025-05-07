@@ -1,10 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
-import { TextInput, Button, Chip, Menu, Divider } from 'react-native-paper';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  KeyboardAvoidingView, 
+  Platform, 
+  ActivityIndicator,
+  TouchableOpacity,
+  SafeAreaView,
+  Modal,
+  FlatList,
+  Keyboard,
+  TextInput as RNTextInput
+} from 'react-native';
 import { Stack } from 'expo-router';
 import { COLORS } from '@/constants/Colors';
 import { sendChatMessage, testApiConnection, getSupportedLanguages } from '@/services/api';
 
+// Define types
 interface ChatMessage {
   id: number;
   text: string;
@@ -40,8 +54,32 @@ const ChatBotScreen = () => {
   const [locationContext, setLocationContext] = useState<string>('');
   const [bananaTypeContext, setBananaTypeContext] = useState<string>('');
   const [quantityContext, setQuantityContext] = useState<number | null>(null);
+  const [keyboardShown, setKeyboardShown] = useState<boolean>(false);
   
   const scrollViewRef = useRef<ScrollView>(null);
+  const inputRef = useRef<RNTextInput>(null);
+
+  // Keyboard listeners to adjust UI
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => {
+        setKeyboardShown(true);
+        scrollToBottom();
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardShown(false);
+      }
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   // Check API connection on component mount
   useEffect(() => {
@@ -74,12 +112,16 @@ const ChatBotScreen = () => {
 
   // Scroll to bottom when chat history updates
   useEffect(() => {
+    scrollToBottom();
+  }, [chatHistory]);
+
+  const scrollToBottom = () => {
     if (scrollViewRef.current) {
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 100);
     }
-  }, [chatHistory]);
+  };
 
   // Helper to add bot messages
   const addBotMessage = (text: string, data?: any) => {
@@ -316,83 +358,117 @@ const ChatBotScreen = () => {
         <Text style={styles.contextTitle}>Current Context:</Text>
         <View style={styles.chipContainer}>
           {locationContext && (
-            <Chip 
+            <TouchableOpacity 
               style={styles.chip} 
-              onClose={() => setLocationContext('')}
-              onPress={() => {}}
+              onPress={() => setLocationContext('')}
             >
-              Location: {locationContext}
-            </Chip>
+              <Text style={styles.chipText}>Location: {locationContext}</Text>
+              <Text style={styles.chipClose}>×</Text>
+            </TouchableOpacity>
           )}
           
           {bananaTypeContext && (
-            <Chip 
+            <TouchableOpacity 
               style={styles.chip} 
-              onClose={() => setBananaTypeContext('')}
-              onPress={() => {}}
+              onPress={() => setBananaTypeContext('')}
             >
-              Type: {bananaTypeContext}
-            </Chip>
+              <Text style={styles.chipText}>Type: {bananaTypeContext}</Text>
+              <Text style={styles.chipClose}>×</Text>
+            </TouchableOpacity>
           )}
           
           {quantityContext !== null && (
-            <Chip 
+            <TouchableOpacity 
               style={styles.chip} 
-              onClose={() => setQuantityContext(null)}
-              onPress={() => {}}
+              onPress={() => setQuantityContext(null)}
             >
-              Quantity: {quantityContext} kg
-            </Chip>
+              <Text style={styles.chipText}>Quantity: {quantityContext} kg</Text>
+              <Text style={styles.chipClose}>×</Text>
+            </TouchableOpacity>
           )}
         </View>
       </View>
     );
   };
 
-  return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.languageSelector}>
-            <Text style={styles.languageLabel}>Language:</Text>
-            <Menu
-              visible={menuVisible}
-              onDismiss={() => setMenuVisible(false)}
-              anchor={
-                <Chip 
-                  icon="translate" 
-                  onPress={() => setMenuVisible(true)}
-                  style={styles.languageChip}
-                >
-                  {language.charAt(0).toUpperCase() + language.slice(1)}
-                </Chip>
-              }
-            >
-              {supportedLanguages.map((lang) => (
-                <Menu.Item 
-                  key={lang} 
+  // Language selector modal
+  const renderLanguageModal = () => {
+    return (
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={menuVisible}
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setMenuVisible(false)}
+        >
+          <View style={styles.languageModalContent}>
+            <Text style={styles.languageModalTitle}>Select Language</Text>
+            <FlatList
+              data={supportedLanguages}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.languageOption,
+                    language === item && styles.selectedLanguageOption
+                  ]}
                   onPress={() => {
-                    setLanguage(lang);
+                    setLanguage(item);
                     setMenuVisible(false);
-                  }} 
-                  title={lang.charAt(0).toUpperCase() + lang.slice(1)} 
-                />
-              ))}
-            </Menu>
+                  }}
+                >
+                  <Text style={[
+                    styles.languageOptionText,
+                    language === item && styles.selectedLanguageOptionText
+                  ]}>
+                    {item.charAt(0).toUpperCase() + item.slice(1)}
+                  </Text>
+                  {language === item && (
+                    <Text style={styles.checkmark}>✓</Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            />
           </View>
+        </TouchableOpacity>
+      </Modal>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.languageSelector}
+            onPress={() => setMenuVisible(true)}
+          >
+            <Text style={styles.languageLabel}>Language:</Text>
+            <View style={styles.languageChip}>
+              <Text style={styles.languageChipText}>
+                {language.charAt(0).toUpperCase() + language.slice(1)}
+              </Text>
+              <Text style={styles.languageChipIcon}>▼</Text>
+            </View>
+          </TouchableOpacity>
           
           {apiStatus === 'disconnected' && (
-            <Chip 
-              icon="wifi-off" 
-              mode="outlined" 
-              onPress={retryConnection}
+            <TouchableOpacity 
               style={styles.statusChip}
+              onPress={retryConnection}
             >
-              {checkingApi ? 'Reconnecting...' : 'Offline'}
-            </Chip>
+              <Text style={styles.statusChipText}>
+                {checkingApi ? 'Reconnecting...' : 'Offline'}
+              </Text>
+            </TouchableOpacity>
           )}
         </View>
         
@@ -401,9 +477,10 @@ const ChatBotScreen = () => {
         <ScrollView 
           style={styles.chatContainer}
           ref={scrollViewRef}
+          contentContainerStyle={styles.chatContentContainer}
         >
           {chatHistory.map(chat => (
-            <View key={chat.id}>
+            <View key={chat.id} style={styles.messageWrapper}>
               <View 
                 style={[
                   styles.messageContainer, 
@@ -430,43 +507,61 @@ const ChatBotScreen = () => {
           )}
         </ScrollView>
         
-        <View style={styles.inputContainer}>
-          <TextInput
+        <View style={[
+          styles.inputContainer,
+          keyboardShown && Platform.OS === 'ios' ? styles.inputContainerWithKeyboard : null
+        ]}>
+          <RNTextInput
+            ref={inputRef}
             style={styles.input}
             value={message}
             onChangeText={setMessage}
             placeholder="Type your message here..."
-            mode="outlined"
-            disabled={loading || apiStatus === 'disconnected'}
+            placeholderTextColor="#888"
+            editable={!(loading || apiStatus === 'disconnected')}
+            multiline={true}
           />
-          <Button 
-            mode="contained" 
-            onPress={handleSend} 
-            style={styles.sendButton}
+          <TouchableOpacity 
+            style={[
+              styles.sendButton,
+              (!message.trim() || loading || apiStatus === 'disconnected') ? styles.sendButtonDisabled : null
+            ]}
+            onPress={handleSend}
             disabled={!message.trim() || loading || apiStatus === 'disconnected'}
-            loading={loading}
           >
-            Send
-          </Button>
+            <Text style={styles.sendButtonText}>Send</Text>
+          </TouchableOpacity>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+        
+        {renderLanguageModal()}
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
+// Define custom styles
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#f8f9fa',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 8,
-    backgroundColor: COLORS.white,
+    padding: 12,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#e1e4e8',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   languageSelector: {
     flexDirection: 'row',
@@ -475,22 +570,52 @@ const styles = StyleSheet.create({
   languageLabel: {
     marginRight: 8,
     fontSize: 14,
+    color: '#555',
+    fontWeight: '500',
   },
   languageChip: {
-    height: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#edf2ff',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#d0d9ff',
+  },
+  languageChipText: {
+    fontSize: 14,
+    color: '#3b5998',
+    fontWeight: '600',
+  },
+  languageChipIcon: {
+    fontSize: 10,
+    color: '#3b5998',
+    marginLeft: 4,
   },
   statusChip: {
-    height: 30,
     backgroundColor: '#ffe0e0',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#ffcccc',
+  },
+  statusChipText: {
+    fontSize: 14,
+    color: '#cc0000',
+    fontWeight: '600',
   },
   contextContainer: {
-    padding: 8,
-    backgroundColor: '#f5f5f5',
+    padding: 12,
+    backgroundColor: '#f0f4f8',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e1e4e8',
   },
   contextTitle: {
     fontSize: 12,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: 6,
     color: '#666',
   },
   chipContainer: {
@@ -498,37 +623,70 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e0f2fe',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     margin: 2,
+    borderWidth: 1,
+    borderColor: '#bae0fd',
+  },
+  chipText: {
+    fontSize: 13,
+    color: '#0369a1',
+  },
+  chipClose: {
+    fontSize: 16,
+    color: '#0369a1',
+    marginLeft: 6,
+    fontWeight: 'bold',
   },
   chatContainer: {
     flex: 1,
+  },
+  chatContentContainer: {
     padding: 16,
+    paddingBottom: 24,
+  },
+  messageWrapper: {
+    marginBottom: 16,
+    width: '100%',
   },
   messageContainer: {
     maxWidth: '80%',
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 18,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
   },
   botMessage: {
     alignSelf: 'flex-start',
-    backgroundColor: COLORS.white,
+    backgroundColor: '#fff',
+    borderBottomLeftRadius: 4,
   },
   userMessage: {
     alignSelf: 'flex-end',
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.primary || '#3a86ff',
+    borderBottomRightRadius: 4,
   },
   messageText: {
     fontSize: 16,
+    lineHeight: 22,
   },
   loadingContainer: {
     alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
-    padding: 8,
+    marginTop: 8,
+    padding: 10,
     backgroundColor: '#f0f0f0',
-    borderRadius: 10,
+    borderRadius: 16,
   },
   loadingText: {
     marginLeft: 8,
@@ -536,41 +694,121 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   dataCard: {
+    marginTop: 8,
     marginLeft: 10,
-    marginBottom: 20,
-    padding: 10,
+    marginBottom: 10,
+    padding: 14,
     backgroundColor: '#f0f8ff',
-    borderRadius: 10,
-    maxWidth: '80%',
+    borderRadius: 12,
+    maxWidth: '90%',
+    borderWidth: 1,
+    borderColor: '#d0e1f9',
   },
   dataTitle: {
     fontWeight: 'bold',
     fontSize: 16,
-    marginBottom: 8,
-    color: COLORS.primary,
+    marginBottom: 10,
+    color: COLORS.primary || '#3a86ff',
   },
   dataRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   dataLabel: {
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: '#444',
+    fontSize: 14,
   },
   dataValue: {
     marginLeft: 10,
+    fontSize: 14,
+    color: '#333',
   },
   inputContainer: {
     flexDirection: 'row',
-    padding: 16,
-    backgroundColor: COLORS.white,
+    padding: 12,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#e1e4e8',
+    alignItems: 'flex-end',
+  },
+  inputContainerWithKeyboard: {
+    paddingBottom: 26, // Extra padding when keyboard is shown on iOS
   },
   input: {
     flex: 1,
-    marginRight: 10,
+    minHeight: 40,
+    maxHeight: 100,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#e1e4e8',
+    marginRight: 8,
   },
   sendButton: {
+    backgroundColor: COLORS.primary || '#3a86ff',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     justifyContent: 'center',
-  }
+    alignItems: 'center',
+    minWidth: 70,
+  },
+  sendButtonDisabled: {
+    backgroundColor: '#c5c9cc',
+  },
+  sendButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  languageModalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+    maxHeight: '70%',
+  },
+  languageModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    textAlign: 'center',
+    color: '#333',
+  },
+  languageOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  selectedLanguageOption: {
+    backgroundColor: '#f0f9ff',
+  },
+  languageOptionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  selectedLanguageOptionText: {
+    fontWeight: 'bold',
+    color: '#0284c7',
+  },
+  checkmark: {
+    fontSize: 18,
+    color: '#0284c7',
+    fontWeight: 'bold',
+  },
 });
