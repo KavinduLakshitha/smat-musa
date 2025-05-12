@@ -14,6 +14,8 @@ import {
 import { Stack } from 'expo-router';
 import { COLORS } from '@/constants/Colors';
 import { getPricePredictor, testApiConnection } from '@/services/api';
+import { useAppColorScheme } from '@/components/ThemeContext';
+import { useLanguage } from '@/components/LanguageContext';
 
 interface PredictionResult {
   predicted_price: number;
@@ -23,12 +25,29 @@ interface PredictionResult {
 }
 
 export default function PredictionRoute() {
+  const { language } = useLanguage();
+  
+  // Get translations based on current language
+  const translations = {
+    en: {
+      screenTitle: "Price Predictor",
+      headerBackTitle: "Price"
+    },
+    si: {
+      screenTitle: "මිල පුරෝකථනය",
+      headerBackTitle: "මිල"
+    }
+  };
+  
+  // Get the current language text
+  const t = language === 'si' ? translations.si : translations.en;
+
   return (
     <>
       <Stack.Screen
         options={{
-          title: "Price Predictor",
-          headerBackTitle: "Price"
+          title: t.screenTitle,
+          headerBackTitle: t.headerBackTitle
         }}
       />
       <PredictionScreen />
@@ -46,6 +65,142 @@ const PredictionScreen = () => {
   const [snackbarVisible, setSnackbarVisible] = useState<boolean>(false);
   const [apiStatus, setApiStatus] = useState<'unknown' | 'connected' | 'disconnected'>('unknown');
   const [checkingApi, setCheckingApi] = useState<boolean>(true);
+  const colorScheme = useAppColorScheme();
+  const isDark = colorScheme === 'dark';
+  const { language } = useLanguage();
+
+  // Define translations for the component
+  const translations = {
+    en: {
+      cardTitle: "Banana Price Predictor",
+      locationLabel: "Location",
+      locationPlaceholder: "e.g., Colombo, Kandy, Galle",
+      bananaTypeLabel: "Banana Type",
+      bananaTypePlaceholder: "e.g., ambul, kolikuttu, anamalu, seeni, rathkesel",
+      quantityLabel: "Quantity (kg, optional)",
+      quantityPlaceholder: "Enter quantity in kg",
+      predictButton: "Predict Price",
+      predictingButton: "Predicting...",
+      resultsTitle: "Price Prediction Results",
+      predictedPrice: "Predicted Price:",
+      totalValue: "Total Value:",
+      date: "Date:",
+      featuresUsed: "Features Used for Prediction:",
+      errorConnecting: "Cannot connect to the API server",
+      errorHelpText: "Please ensure the server is running and your device is on the same network.",
+      retryButton: "Retry Connection",
+      locationError: "Please enter your location",
+      errorPrefix: "Error predicting price: ",
+      snackbarAction: "OK"
+    },
+    si: {
+      cardTitle: "කෙසෙල් මිල පුරෝකථනය",
+      locationLabel: "ස්ථානය",
+      locationPlaceholder: "උදා., කොළඹ, මහනුවර, ගාල්ල",
+      bananaTypeLabel: "කෙසෙල් වර්ගය",
+      bananaTypePlaceholder: "උදා., අඹුල්, කොලිකුට්ටු, අනමාලු, සීනි, රත්කෙසෙල්",
+      quantityLabel: "ප්‍රමාණය (කි.ග්‍රෑ., විකල්ප)",
+      quantityPlaceholder: "ප්‍රමාණය කි.ග්‍රෑම් වලින් ඇතුළත් කරන්න",
+      predictButton: "මිල පුරෝකථනය කරන්න",
+      predictingButton: "පුරෝකථනය කරමින්...",
+      resultsTitle: "මිල පුරෝකථන ප්‍රතිඵල",
+      predictedPrice: "පුරෝකථිත මිල:",
+      totalValue: "මුළු වටිනාකම:",
+      date: "දිනය:",
+      featuresUsed: "පුරෝකථනය සඳහා භාවිතා කළ විශේෂාංග:",
+      errorConnecting: "API සේවාදායකයට සම්බන්ධ විය නොහැක",
+      errorHelpText: "කරුණාකර සේවාදායකය ක්‍රියාත්මක වන බවත්, ඔබේ උපකරණය එකම ජාලයේ ඇති බවත් තහවුරු කරගන්න.",
+      retryButton: "නැවත සම්බන්ධ වීමට උත්සාහ කරන්න",
+      locationError: "කරුණාකර ඔබේ ස්ථානය ඇතුලත් කරන්න",
+      errorPrefix: "මිල පුරෝකථනයේ දෝෂයක්: ",
+      snackbarAction: "හරි"
+    }
+  };
+  
+  // Get the current language text
+  const t = language === 'si' ? translations.si : translations.en;
+
+  const themedStyles = {
+    safeArea: {
+      ...styles.safeArea,
+      backgroundColor: isDark ? '#121212' : '#f8f9fa',
+    },
+    container: {
+      ...styles.container,
+      backgroundColor: isDark ? '#121212' : '#f8f9fa',
+    },
+    formCard: {
+      ...styles.formCard,
+      backgroundColor: isDark ? '#1e1e1e' : '#fff',
+      borderColor: isDark ? '#333333' : '#e1e4e8',
+    },
+    cardTitle: {
+      ...styles.cardTitle,
+      color: isDark ? '#e0e0e0' : COLORS.text || '#333',
+    },
+    inputContainer: {
+      ...styles.inputContainer,
+    },
+    inputLabel: {
+      ...styles.inputLabel,
+      color: isDark ? '#b0b0b0' : '#555',
+    },
+    input: {
+      ...styles.input,
+      backgroundColor: isDark ? '#2a2a2a' : '#f5f5f5',
+      borderColor: isDark ? '#444444' : '#e1e4e8',
+      color: isDark ? '#e0e0e0' : '#000000',
+    },
+    resultCard: {
+      ...styles.resultCard,
+      backgroundColor: isDark ? '#1e1e1e' : '#fff',
+    },
+    resultLabel: {
+      ...styles.resultLabel,
+      color: isDark ? '#e0e0e0' : COLORS.text || '#333',
+    },
+    resultValue: {
+      ...styles.resultValue,
+      color: isDark ? '#7cb9ff' : COLORS.primary || '#3a86ff',
+    },
+    featuresContainer: {
+      ...styles.featuresContainer,
+      backgroundColor: isDark ? '#2a2a2a' : '#f8f9fa',
+    },
+    featuresTitle: {
+      ...styles.featuresTitle,
+      color: isDark ? '#cccccc' : '#555',
+    },
+    featureLabel: {
+      ...styles.featureLabel,
+      color: isDark ? '#b0b0b0' : '#555',
+    },
+    featureValue: {
+      ...styles.featureValue,
+      color: isDark ? '#e0e0e0' : '#333',
+    },
+    featureRow: {
+      ...styles.featureRow,
+      borderBottomColor: isDark ? '#444444' : '#eee',
+    },
+    errorCard: {
+      ...styles.errorCard,
+      backgroundColor: isDark ? '#352814' : '#fff8e1',
+      borderLeftColor: isDark ? '#ff9800' : '#ff9800',
+    },
+    errorText: {
+      ...styles.errorText,
+      color: isDark ? '#ff6b6b' : '#f44336',
+    },
+    errorHelpText: {
+      ...styles.errorHelpText,
+      color: isDark ? '#cccccc' : '#555',
+    },
+    resultContainer: {
+      ...styles.resultContainer,
+      borderBottomColor: isDark ? '#444444' : '#eee',
+    },
+  };
 
   // Check API connection on component mount
   useEffect(() => {
@@ -57,7 +212,7 @@ const PredictionScreen = () => {
       } catch (error) {
         console.error('API connection error:', error);
         setApiStatus('disconnected');
-        setError('Cannot connect to API server. Please check your network connection.');
+        setError(t.errorConnecting);
         setSnackbarVisible(true);
       } finally {
         setCheckingApi(false);
@@ -65,11 +220,11 @@ const PredictionScreen = () => {
     };
 
     checkApiConnection();
-  }, []);
+  }, [t.errorConnecting]);
 
   const predictPrice = async () => {
     if (!location) {
-      setError('Please enter your location');
+      setError(t.locationError);
       setSnackbarVisible(true);
       return;
     }
@@ -113,7 +268,7 @@ const PredictionScreen = () => {
       setLoading(false);
     } catch (error) {
       setLoading(false);
-      setError('Error predicting price: ' + (error instanceof Error ? error.message : String(error)));
+      setError(t.errorPrefix + (error instanceof Error ? error.message : String(error)));
       setSnackbarVisible(true);
     }
   };
@@ -123,20 +278,20 @@ const PredictionScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={themedStyles.safeArea}>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={themedStyles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {apiStatus === 'disconnected' && !checkingApi && (
-            <View style={styles.errorCard}>
-              <Text style={styles.errorText}>
-                Cannot connect to the API server
+            <View style={themedStyles.errorCard}>
+              <Text style={themedStyles.errorText}>
+                {t.errorConnecting}
               </Text>
-              <Text style={styles.errorHelpText}>
-                Please ensure the server is running and your device is on the same network.
+              <Text style={themedStyles.errorHelpText}>
+                {t.errorHelpText}
               </Text>
               <TouchableOpacity 
                 style={styles.retryButton}
@@ -147,52 +302,52 @@ const PredictionScreen = () => {
                     .then(() => setApiStatus('connected'))
                     .catch(() => {
                       setApiStatus('disconnected');
-                      setError('Still cannot connect to API server.');
+                      setError(t.errorConnecting);
                       setSnackbarVisible(true);
                     })
                     .finally(() => setCheckingApi(false));
                 }}
               >
-                <Text style={styles.retryButtonText}>Retry Connection</Text>
+                <Text style={styles.retryButtonText}>{t.retryButton}</Text>
               </TouchableOpacity>
             </View>
           )}
 
-          <View style={styles.formCard}>
-            <Text style={styles.cardTitle}>Banana Price Predictor</Text>
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Location</Text>
+          <View style={themedStyles.formCard}>
+            <Text style={themedStyles.cardTitle}>{t.cardTitle}</Text>
+            <View style={themedStyles.inputContainer}>
+              <Text style={themedStyles.inputLabel}>{t.locationLabel}</Text>
               <TextInput
-                style={styles.input}
+                style={themedStyles.input}
                 value={location}
                 onChangeText={text => setLocation(text)}
-                placeholder="e.g., Colombo, Kandy, Galle"
-                placeholderTextColor="#888"
+                placeholder={t.locationPlaceholder}
+                placeholderTextColor={isDark ? "#777777" : "#888888"}
                 editable={!(apiStatus === 'disconnected' || loading)}
               />
             </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Banana Type</Text>
+            <View style={themedStyles.inputContainer}>
+              <Text style={themedStyles.inputLabel}>{t.bananaTypeLabel}</Text>
               <TextInput
-                style={styles.input}
+                style={themedStyles.input}
                 value={bananaType}
                 onChangeText={text => setBananaType(text)}
-                placeholder="e.g., ambul, kolikuttu, anamalu, seeni, rathkesel"
-                placeholderTextColor="#888"
+                placeholder={t.bananaTypePlaceholder}
+                placeholderTextColor={isDark ? "#777777" : "#888888"}
                 editable={!(apiStatus === 'disconnected' || loading)}
               />
             </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Quantity (kg, optional)</Text>
+            <View style={themedStyles.inputContainer}>
+              <Text style={themedStyles.inputLabel}>{t.quantityLabel}</Text>
               <TextInput
-                style={styles.input}
+                style={themedStyles.input}
                 value={quantity}
                 onChangeText={text => setQuantity(text)}
                 keyboardType="numeric"
-                placeholder="Enter quantity in kg"
-                placeholderTextColor="#888"
+                placeholder={t.quantityPlaceholder}
+                placeholderTextColor={isDark ? "#777777" : "#888888"}
                 editable={!(apiStatus === 'disconnected' || loading)}
               />
             </View>
@@ -208,50 +363,50 @@ const PredictionScreen = () => {
               {loading ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="small" color="#fff" />
-                  <Text style={styles.predictButtonText}>Predicting...</Text>
+                  <Text style={styles.predictButtonText}>{t.predictingButton}</Text>
                 </View>
               ) : (
-                <Text style={styles.predictButtonText}>Predict Price</Text>
+                <Text style={styles.predictButtonText}>{t.predictButton}</Text>
               )}
             </TouchableOpacity>
           </View>
 
           {prediction && (
-            <View style={styles.resultCard}>
-              <Text style={styles.cardTitle}>Price Prediction Results</Text>
+            <View style={themedStyles.resultCard}>
+              <Text style={themedStyles.cardTitle}>{t.resultsTitle}</Text>
               
-              <View style={styles.resultContainer}>
+              <View style={themedStyles.resultContainer}>
                 <View style={styles.resultRow}>
-                  <Text style={styles.resultLabel}>Predicted Price:</Text>
-                  <Text style={styles.resultValue}>
+                  <Text style={themedStyles.resultLabel}>{t.predictedPrice}</Text>
+                  <Text style={themedStyles.resultValue}>
                     {prediction.predicted_price.toFixed(2)} {prediction.currency}/kg
                   </Text>
                 </View>
                 
                 {quantity && (
                   <View style={styles.resultRow}>
-                    <Text style={styles.resultLabel}>Total Value:</Text>
-                    <Text style={styles.resultValue}>
+                    <Text style={themedStyles.resultLabel}>{t.totalValue}</Text>
+                    <Text style={themedStyles.resultValue}>
                       {(prediction.predicted_price * parseInt(quantity || '0')).toFixed(2)} {prediction.currency}
                     </Text>
                   </View>
                 )}
                 
                 <View style={styles.resultRow}>
-                  <Text style={styles.resultLabel}>Date:</Text>
-                  <Text style={styles.resultValue}>
+                  <Text style={themedStyles.resultLabel}>{t.date}</Text>
+                  <Text style={themedStyles.resultValue}>
                     {prediction.date}
                   </Text>
                 </View>
               </View>
 
               {prediction.features_used && (
-                <View style={styles.featuresContainer}>
-                  <Text style={styles.featuresTitle}>Features Used for Prediction:</Text>
+                <View style={themedStyles.featuresContainer}>
+                  <Text style={themedStyles.featuresTitle}>{t.featuresUsed}</Text>
                   {Object.entries(prediction.features_used).map(([key, value]) => (
-                    <View key={key} style={styles.featureRow}>
-                      <Text style={styles.featureLabel}>{key}:</Text>
-                      <Text style={styles.featureValue}>{value.toString()}</Text>
+                    <View key={key} style={themedStyles.featureRow}>
+                      <Text style={themedStyles.featureLabel}>{key}:</Text>
+                      <Text style={themedStyles.featureValue}>{value.toString()}</Text>
                     </View>
                   ))}
                 </View>
@@ -265,7 +420,7 @@ const PredictionScreen = () => {
           <View style={styles.snackbar}>
             <Text style={styles.snackbarText}>{error}</Text>
             <TouchableOpacity onPress={dismissSnackbar}>
-              <Text style={styles.snackbarAction}>OK</Text>
+              <Text style={styles.snackbarAction}>{t.snackbarAction}</Text>
             </TouchableOpacity>
           </View>
         )}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Redirect } from 'expo-router';
+import { Text, View as ThemedView } from '@/components/Themed';
 import { 
   View, 
   TouchableOpacity, 
@@ -10,7 +11,6 @@ import {
   ScrollView,
   Dimensions
 } from 'react-native';
-import { Text } from 'react-native';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/firebaseConfig';
@@ -18,13 +18,15 @@ import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
-
+import { useAppColorScheme } from '@/components/ThemeContext';
 import { useLanguage } from '@/components/LanguageContext';
 import { COLORS } from '@/constants/Colors';
 
 const { width } = Dimensions.get('window');
 
 export default function TabsHomeScreen() {
+  const colorScheme = useAppColorScheme();
+  const isDark = colorScheme === 'dark';
   const [initializing, setInitializing] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [userName, setUserName] = useState("");
@@ -117,7 +119,10 @@ export default function TabsHomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[
+      styles.container, 
+      { backgroundColor: isDark ? '#121212' : '#f8f9fa' }
+    ]}>
       {/* Gradient Header with SVG Wave */}
       <View style={styles.headerContainer}>
         <LinearGradient
@@ -138,10 +143,7 @@ export default function TabsHomeScreen() {
                     {userName || (language === "en" ? "User" : "පරිශීලක")}
                   </Text>
                 </View>
-              </View>
-              <TouchableOpacity style={styles.settingsButton} onPress={() => navigateTo('profile')}>
-                <Ionicons name="settings-outline" size={24} color="#fff" />
-              </TouchableOpacity>
+              </View>              
             </View>
             
             <View style={styles.headerBanner}>
@@ -285,7 +287,7 @@ export default function TabsHomeScreen() {
         </View>
         
         {/* Quick Tip Section */}
-        <View style={styles.tipContainer}>
+        <View style={[styles.tipContainer, { backgroundColor: isDark ? '#1a1a1a' : '#fff' }]}>
           <View style={styles.tipHeader}>
             <Ionicons name="bulb-outline" size={24} color="#2C5E1A" />
             <Text style={styles.tipTitle}>
@@ -364,15 +366,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
-  },
-  settingsButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  },  
   headerBanner: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -402,7 +396,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 16,
   },
   featureContainer: {
@@ -460,7 +453,6 @@ const styles = StyleSheet.create({
   },
   tipContainer: {
     width: '100%',
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
     marginTop: 8,
@@ -479,12 +471,10 @@ const styles = StyleSheet.create({
   tipTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#2C5E1A',
     marginLeft: 8,
   },
   tipContent: {
     fontSize: 14,
-    color: '#444',
     lineHeight: 20,
   },  
 });

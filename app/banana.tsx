@@ -6,24 +6,67 @@ import {
   ActivityIndicator, 
   SafeAreaView, 
   StyleSheet, 
-  TouchableOpacity, 
-  Text,
+  TouchableOpacity,
   ScrollView,
   Platform 
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
-import { useLanguage } from "../LanguageContext";
-import { Stack } from "expo-router";
+import { useLanguage } from "@/components/LanguageContext";
+import { Stack, useRouter } from "expo-router";
 import { COLORS } from '@/constants/Colors';
+import { useAppColorScheme } from "@/components/ThemeContext";
+import { Text, View as ThemedView } from '@/components/Themed';
+
+interface ClassificationResult {
+  predicted_class: string;
+  confidence: string;
+  shelf_life: string;
+}
+
+interface ShelfLifeInfo {
+  unripe: string;
+  ripe: string;
+  overripe: string;
+  rotten: string;
+  unknown: string;
+}
+
+interface Translation {
+  title: string;
+  subtitle: string;
+  pickImage: string;
+  takePhoto: string;
+  classifyImage: string;
+  noImage: string;
+  noImageMsg: string;
+  prediction: string;
+  confidence: string;
+  shelfLife: string;
+  success: string;
+  error: string;
+  permissionDenied: string;
+  permissionGallery: string;
+  permissionCamera: string;
+  classificationError: string;
+  analyzing: string;
+  shelfLifeInfo: ShelfLifeInfo;
+}
+
+interface Translations {
+  en: Translation;
+  si: Translation;
+}
 
 export default function BananaRoute() {
+  const { language } = useLanguage();
+  
   return (
     <>        
       <Stack.Screen 
         options={{
-          title: "Banana Classification",
-          headerBackTitle: "Home"
+          title: language === 'si' ? "කෙසෙල් වර්ගීකරණය" : "Banana Classification",
+          headerBackTitle: language === 'si' ? "මුල් පිටුව" : "Home"
         }} 
       />
       <BananaScreen />
@@ -32,18 +75,21 @@ export default function BananaRoute() {
 }
 
 const BananaScreen = () => {
-  const languageContext = useLanguage();
-  const language = (languageContext && languageContext.language) ? languageContext.language : 'en';
+  // Get router for navigation
+  const router = useRouter();
+  
+  // const colorScheme = useAppColorScheme();
+  // const isDark = colorScheme === 'dark';
+  
+  // Use the language context properly
+  const { language } = useLanguage();
   
   const [image, setImage] = useState<string | null>(null);
-  const [result, setResult] = useState<{
-    predicted_class: string;
-    confidence: string;
-    shelf_life: string;
-  } | null>(null);
+  const [result, setResult] = useState<ClassificationResult | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const translations = {
+  // Define translations with proper typing
+  const translations: Translations = {
     en: {
       title: "Banana Classification",
       subtitle: "Upload a photo to identify the ripeness level",
@@ -61,6 +107,7 @@ const BananaScreen = () => {
       permissionGallery: "You need to grant permission to access the gallery.",
       permissionCamera: "You need to grant permission to use the camera.",
       classificationError: "Failed to classify image. Check your server.",
+      analyzing: "Analyzing...",
       shelfLifeInfo: {
         unripe: "4-6 days to become ripe.",
         ripe: "3-4 days to become overripe.",
@@ -86,6 +133,7 @@ const BananaScreen = () => {
       permissionGallery: "ගැලරියට ප්‍රවේශය ලබාදිය යුතුය.",
       permissionCamera: "කැමරාව භාවිතයට අවසර ලබාදිය යුතුය.",
       classificationError: "පින්තූරය වර්ගීකරණය කළ නොහැක. සේවාදායකය පරීක්ෂා කරන්න.",
+      analyzing: "විශ්ලේෂණය කරමින්...",
       shelfLifeInfo: {
         unripe: "පකුණු වීමට දින 4-6ක්.",
         ripe: "අධික පකුණු වීමට දින 3-4ක්.",
@@ -96,7 +144,60 @@ const BananaScreen = () => {
     },
   };
 
-  const t = translations[language as keyof typeof translations] || translations.en;
+  // Get current language content with type safety
+  const t = language === 'si' ? translations.si : translations.en;
+
+  const colorScheme = useAppColorScheme();
+  const isDark = colorScheme === 'dark';
+
+  const themedStyles = {
+    safeArea: {
+      ...styles.safeArea,
+      backgroundColor: isDark ? '#121212' : '#f8f9fa',
+    },
+    scrollView: {
+      ...styles.scrollView,
+      backgroundColor: isDark ? '#121212' : '#f8f9fa',
+    },
+    card: {
+      ...styles.card,
+      backgroundColor: isDark ? '#1e1e1e' : '#fff',
+    },
+    title: {
+      ...styles.title,
+      color: isDark ? '#4CAF50' : COLORS.primary || '#3a86ff',
+    },
+    subtitle: {
+      ...styles.subtitle,
+      color: isDark ? '#e0e0e0' : '#555555',
+    },
+    imagePlaceholder: {
+      ...styles.imagePlaceholder,
+      backgroundColor: isDark ? '#2a2a2a' : '#f0f0f0',
+      borderColor: isDark ? '#444444' : '#e0e0e0',
+    },
+    resultContainer: {
+      ...styles.resultContainer,
+      borderColor: isDark ? '#444444' : '#e0e0e0',
+      backgroundColor: isDark ? '#1e1e1e' : '#ffffff',
+    },
+    resultDetails: {
+      ...styles.resultDetails,
+      backgroundColor: isDark ? '#1e1e1e' : '#ffffff',
+    },
+    resultLabel: {
+      ...styles.resultLabel,
+      color: isDark ? '#e0e0e0' : '#333333',
+    },
+    resultValue: {
+      ...styles.resultValue,
+      color: isDark ? '#b0b0b0' : '#555555',
+    },
+    divider: {
+      ...styles.divider,
+      backgroundColor: isDark ? '#444444' : '#eee',
+    },
+  };
   
   const pickImage = async () => {
     console.log("Picking image...");
@@ -147,8 +248,8 @@ const BananaScreen = () => {
     }
   };
 
-  const getShelfLife = (classification: string) => {
-    const key = classification.toLowerCase() as keyof typeof t.shelfLifeInfo;
+  const getShelfLife = (classification: string): string => {
+    const key = classification.toLowerCase() as keyof ShelfLifeInfo;
     return t.shelfLifeInfo[key] || t.shelfLifeInfo.unknown;
   };
 
@@ -162,12 +263,13 @@ const BananaScreen = () => {
     setLoading(true);
     setResult(null);
 
+    // Create form data
     const formData = new FormData();
     formData.append("image", {
       uri: imageUri,
       name: "banana.jpg",
       type: "image/jpeg",
-    } as any);
+    } as unknown as Blob);
 
     console.log("Sending request to API...");
     
@@ -200,7 +302,8 @@ const BananaScreen = () => {
     }
   };
 
-  const getClassificationColor = (resultClass: string) => {
+  // Get color based on classification result
+  const getClassificationColor = (resultClass: string): string => {
     const lowerClass = resultClass.toLowerCase();
     switch (lowerClass) {
       case 'unripe':
@@ -217,12 +320,12 @@ const BananaScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+    <SafeAreaView style={themedStyles.safeArea}>
+      <ScrollView style={themedStyles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.container}>
-          <View style={styles.card}>
-            <Text style={styles.title}>{t.title}</Text>
-            <Text style={styles.subtitle}>{t.subtitle}</Text>
+          <ThemedView style={styles.card}>
+            <Text style={themedStyles.title}>{t.title}</Text>
+            <Text style={themedStyles.subtitle}>{t.subtitle}</Text>
             
             {image ? (
               <View style={styles.imageContainer}>
@@ -234,7 +337,7 @@ const BananaScreen = () => {
               </View>
             ) : (
               <View style={styles.placeholderContainer}>
-                <View style={styles.imagePlaceholder}>
+                <View style={themedStyles.imagePlaceholder}>
                   <Text style={styles.placeholderText}>🍌</Text>
                 </View>
               </View>
@@ -260,7 +363,7 @@ const BananaScreen = () => {
               {loading ? (
                 <View style={[styles.button, styles.classifyButton, styles.loadingButton]}>
                   <ActivityIndicator size="small" color="#fff" />
-                  <Text style={[styles.buttonText, styles.loadingText]}>Analyzing...</Text>
+                  <Text style={[styles.buttonText, styles.loadingText]}>{t.analyzing}</Text>
                 </View>
               ) : (
                 <TouchableOpacity
@@ -279,7 +382,7 @@ const BananaScreen = () => {
             </View>
 
             {result && (
-              <View style={styles.resultContainer}>
+              <View style={themedStyles.resultContainer}>
                 <View style={[
                   styles.resultHeader,
                   { backgroundColor: getClassificationColor(result.predicted_class) }
@@ -287,22 +390,22 @@ const BananaScreen = () => {
                   <Text style={styles.resultHeaderText}>{result.predicted_class}</Text>
                 </View>
                 
-                <View style={styles.resultDetails}>
+                <View style={themedStyles.resultDetails}>
                   <View style={styles.resultRow}>
-                    <Text style={styles.resultLabel}>{t.confidence}:</Text>
-                    <Text style={styles.resultValue}>{result.confidence}</Text>
+                    <Text style={themedStyles.resultLabel}>{t.confidence}:</Text>
+                    <Text style={themedStyles.resultValue}>{result.confidence}</Text>
                   </View>
                   
-                  <View style={styles.divider} />
+                  <View style={themedStyles.divider} />
                   
                   <View style={styles.resultRow}>
-                    <Text style={styles.resultLabel}>{t.shelfLife}:</Text>
-                    <Text style={styles.resultValue}>{result.shelf_life}</Text>
+                    <Text style={themedStyles.resultLabel}>{t.shelfLife}:</Text>
+                    <Text style={themedStyles.resultValue}>{result.shelf_life}</Text>
                   </View>
                 </View>
               </View>
             )}
-          </View>
+          </ThemedView>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -312,7 +415,7 @@ const BananaScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    // backgroundColor: '#f8f9fa',
   },
   scrollView: {
     flex: 1,
@@ -328,7 +431,7 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
-    backgroundColor: '#fff',
+    // backgroundColor: '#fff',
     borderRadius: 16,
     padding: 20,
     elevation: 2,
@@ -346,7 +449,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -355,7 +457,7 @@ const styles = StyleSheet.create({
     height: 250,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#f1f1f1',
     marginBottom: 20,
     elevation: 1,
     shadowColor: '#000',
@@ -441,14 +543,12 @@ const styles = StyleSheet.create({
   resultHeaderText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
   resultDetails: {
     padding: 16,
-    backgroundColor: '#fff',
   },
   resultRow: {
     flexDirection: 'row',
@@ -459,11 +559,9 @@ const styles = StyleSheet.create({
   resultLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
   },
   resultValue: {
     fontSize: 16,
-    color: '#555',
   },
   divider: {
     height: 1,

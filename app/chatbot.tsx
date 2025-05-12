@@ -17,6 +17,8 @@ import {
 import { Stack } from 'expo-router';
 import { COLORS } from '@/constants/Colors';
 import { sendChatMessage, testApiConnection, getSupportedLanguages } from '@/services/api';
+import { useAppColorScheme } from '@/components/ThemeContext';
+import { useLanguage } from '@/components/LanguageContext';
 
 // Define types
 interface ChatMessage {
@@ -27,12 +29,29 @@ interface ChatMessage {
 }
 
 export default function ChatbotRoute() {
+  const { language } = useLanguage();
+  
+  // Define translations for the route component
+  const translations = {
+    en: {
+      screenTitle: "AI Farming Assistant",
+      headerBackTitle: "Chat"
+    },
+    si: {
+      screenTitle: "AI ගොවිතැන් සහායක",
+      headerBackTitle: "චැට්"
+    }
+  };
+  
+  // Get the current language text
+  const t = language === 'si' ? translations.si : translations.en;
+
   return (
     <>
       <Stack.Screen
         options={{
-          title: "AI Farming Assistant",
-          headerBackTitle: "Chat"
+          title: t.screenTitle,
+          headerBackTitle: t.headerBackTitle
         }}
       />
       <ChatBotScreen />
@@ -42,11 +61,10 @@ export default function ChatbotRoute() {
 
 const ChatBotScreen = () => {
   const [message, setMessage] = useState<string>('');
-  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([
-    { id: 1, text: 'Hello! I\'m your banana farming assistant. How can I help you?', isBot: true }
-  ]);
+  const { language: appLanguage } = useLanguage();
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [language, setLanguage] = useState<string>('english');
+  const [chatLanguage, setChatLanguage] = useState<string>('english');
   const [supportedLanguages, setSupportedLanguages] = useState<string[]>(['english', 'sinhala']);
   const [menuVisible, setMenuVisible] = useState<boolean>(false);
   const [apiStatus, setApiStatus] = useState<'unknown' | 'connected' | 'disconnected'>('unknown');
@@ -55,9 +73,199 @@ const ChatBotScreen = () => {
   const [bananaTypeContext, setBananaTypeContext] = useState<string>('');
   const [quantityContext, setQuantityContext] = useState<number | null>(null);
   const [keyboardShown, setKeyboardShown] = useState<boolean>(false);
+  const colorScheme = useAppColorScheme();
+  const isDark = colorScheme === 'dark';
   
   const scrollViewRef = useRef<ScrollView>(null);
   const inputRef = useRef<RNTextInput>(null);
+
+  // Define translations for the component
+  const translations = {
+    en: {
+      welcomeMessage: "Hello! I'm your banana farming assistant. How can I help you?",
+      language: "Language:",
+      offline: "Offline",
+      reconnecting: "Reconnecting...",
+      currentContext: "Current Context:",
+      locationChip: "Location: ",
+      typeChip: "Type: ",
+      quantityChip: "Quantity: ",
+      kgUnit: " kg",
+      messagePlaceholder: "Type your message here...",
+      sendButton: "Send",
+      selectLanguage: "Select Language",
+      loadingText: "Thinking..."
+    },
+    si: {
+      welcomeMessage: "ආයුබෝවන්! මම ඔබේ කේසෙල් වගා සහායකයායි. මට ඔබට කෙසේ උදව් කළ හැකිද?",
+      language: "භාෂාව:",
+      offline: "ඔෆ්ලයින්",
+      reconnecting: "නැවත සම්බන්ධ වෙමින්...",
+      currentContext: "වර්තමාන සන්දර්භය:",
+      locationChip: "ස්ථානය: ",
+      typeChip: "වර්ගය: ",
+      quantityChip: "ප්‍රමාණය: ",
+      kgUnit: " කි.ග්‍රෑ.",
+      messagePlaceholder: "ඔබේ පණිවිඩය මෙහි ටයිප් කරන්න...",
+      sendButton: "යවන්න",
+      selectLanguage: "භාෂාව තෝරන්න",
+      loadingText: "සිතමින්..."
+    }
+  };
+  
+  // Get the current language text
+  const t = appLanguage === 'si' ? translations.si : translations.en;
+
+  // Initialize chat with welcome message based on selected language
+  useEffect(() => {
+    setChatHistory([
+      { id: 1, text: t.welcomeMessage, isBot: true }
+    ]);
+  }, [t.welcomeMessage]);
+
+  // Update chat language when app language changes
+  useEffect(() => {
+    setChatLanguage(appLanguage === 'si' ? 'sinhala' : 'english');
+  }, [appLanguage]);
+
+  const themedStyles = {
+    safeArea: {
+      ...styles.safeArea,
+      backgroundColor: isDark ? '#121212' : '#f8f9fa',
+    },
+    container: {
+      ...styles.container,
+      backgroundColor: isDark ? '#121212' : '#f8f9fa',
+    },
+    header: {
+      ...styles.header,
+      backgroundColor: isDark ? '#1e1e1e' : '#fff',
+      borderBottomColor: isDark ? '#333333' : '#e1e4e8',
+    },
+    languageLabel: {
+      ...styles.languageLabel,
+      color: isDark ? '#b0b0b0' : '#555',
+    },
+    languageChip: {
+      ...styles.languageChip,
+      backgroundColor: isDark ? '#293649' : '#edf2ff',
+      borderColor: isDark ? '#394B61' : '#d0d9ff',
+    },
+    languageChipText: {
+      ...styles.languageChipText,
+      color: isDark ? '#a2b9e0' : '#3b5998',
+    },
+    languageChipIcon: {
+      ...styles.languageChipIcon,
+      color: isDark ? '#a2b9e0' : '#3b5998',
+    },
+    statusChip: {
+      ...styles.statusChip,
+      backgroundColor: isDark ? '#3d2626' : '#ffe0e0',
+      borderColor: isDark ? '#4d2e2e' : '#ffcccc',
+    },
+    contextContainer: {
+      ...styles.contextContainer,
+      backgroundColor: isDark ? '#1a1d21' : '#f0f4f8',
+      borderBottomColor: isDark ? '#333333' : '#e1e4e8',
+    },
+    contextTitle: {
+      ...styles.contextTitle,
+      color: isDark ? '#b0b0b0' : '#666',
+    },
+    chip: {
+      ...styles.chip,
+      backgroundColor: isDark ? '#1e2f3e' : '#e0f2fe',
+      borderColor: isDark ? '#2a3f52' : '#bae0fd',
+    },
+    chipText: {
+      ...styles.chipText,
+      color: isDark ? '#77b6e8' : '#0369a1',
+    },
+    chipClose: {
+      ...styles.chipClose,
+      color: isDark ? '#77b6e8' : '#0369a1',
+    },
+    botMessage: {
+      ...styles.botMessage,
+      backgroundColor: isDark ? '#1e1e1e' : '#fff',
+    },
+    userMessage: {
+      ...styles.userMessage,
+      backgroundColor: COLORS.primary || '#3a86ff',
+    },
+    messageText: {
+      ...styles.messageText,
+      color: isDark ? (prop: any) => prop.isBot ? '#e0e0e0' : '#ffffff' : (prop: any) => prop.isBot ? COLORS.text : COLORS.white,
+    },
+    loadingContainer: {
+      ...styles.loadingContainer,
+      backgroundColor: isDark ? '#2a2a2a' : '#f0f0f0',
+    },
+    loadingText: {
+      ...styles.loadingText,
+      color: isDark ? '#b0b0b0' : '#666',
+    },
+    dataCard: {
+      ...styles.dataCard,
+      backgroundColor: isDark ? '#1a2633' : '#f0f8ff',
+      borderColor: isDark ? '#223547' : '#d0e1f9',
+    },
+    dataTitle: {
+      ...styles.dataTitle,
+      color: isDark ? '#77b6e8' : COLORS.primary || '#3a86ff',
+    },
+    dataLabel: {
+      ...styles.dataLabel,
+      color: isDark ? '#b0b0b0' : '#444',
+    },
+    dataValue: {
+      ...styles.dataValue,
+      color: isDark ? '#e0e0e0' : '#333',
+    },
+    inputContainer: {
+      ...styles.inputContainer,
+      backgroundColor: isDark ? '#1e1e1e' : '#fff',
+      borderTopColor: isDark ? '#333333' : '#e1e4e8',
+    },
+    input: {
+      ...styles.input,
+      backgroundColor: isDark ? '#2a2a2a' : '#f5f5f5',
+      borderColor: isDark ? '#444444' : '#e1e4e8',
+      color: isDark ? '#e0e0e0' : '#000000',
+    },
+    modalOverlay: {
+      ...styles.modalOverlay,
+    },
+    languageModalContent: {
+      ...styles.languageModalContent,
+      backgroundColor: isDark ? '#1e1e1e' : '#fff',
+    },
+    languageModalTitle: {
+      ...styles.languageModalTitle,
+      color: isDark ? '#e0e0e0' : '#333',
+    },
+    languageOption: {
+      ...styles.languageOption,
+      borderBottomColor: isDark ? '#333333' : '#eee',
+    },
+    selectedLanguageOption: {
+      ...styles.selectedLanguageOption,
+      backgroundColor: isDark ? '#1a2633' : '#f0f9ff',
+    },
+    languageOptionText: {
+      ...styles.languageOptionText,
+      color: isDark ? '#e0e0e0' : '#333',
+    },
+    selectedLanguageOptionText: {
+      ...styles.selectedLanguageOptionText,
+      color: isDark ? '#77b6e8' : '#0284c7',
+    },
+    checkmark: {
+      ...styles.checkmark,
+      color: isDark ? '#77b6e8' : '#0284c7',
+    },
+  };
 
   // Keyboard listeners to adjust UI
   useEffect(() => {
@@ -242,7 +450,7 @@ const ChatBotScreen = () => {
       // Call the chatbot API
       const response = await sendChatMessage({
         message: formattedMessage,
-        language: language
+        language: chatLanguage
       });
       
       // Process data from response
@@ -297,24 +505,46 @@ const ChatBotScreen = () => {
   const renderMarketData = (data: any) => {
     if (!data || !data.best_market) return null;
     
+    // Market-specific translations
+    const marketTranslations = {
+      en: {
+        title: "Market Recommendation",
+        bestMarket: "Best Market:",
+        price: "Price:",
+        distance: "Distance:",
+        potentialProfit: "Potential Profit:",
+        kmUnit: "km"
+      },
+      si: {
+        title: "වෙළඳපොල නිර්දේශය",
+        bestMarket: "හොඳම වෙළඳපොල:",
+        price: "මිල:",
+        distance: "දුර:",
+        potentialProfit: "විය හැකි ලාභය:",
+        kmUnit: "කි.මී."
+      }
+    };
+    
+    const mt = appLanguage === 'si' ? marketTranslations.si : marketTranslations.en;
+    
     return (
-      <View style={styles.dataCard}>
-        <Text style={styles.dataTitle}>Market Recommendation</Text>
+      <View style={themedStyles.dataCard}>
+        <Text style={themedStyles.dataTitle}>{mt.title}</Text>
         <View style={styles.dataRow}>
-          <Text style={styles.dataLabel}>Best Market:</Text>
-          <Text style={styles.dataValue}>{data.best_market.name}</Text>
+          <Text style={themedStyles.dataLabel}>{mt.bestMarket}</Text>
+          <Text style={themedStyles.dataValue}>{data.best_market.name}</Text>
         </View>
         <View style={styles.dataRow}>
-          <Text style={styles.dataLabel}>Price:</Text>
-          <Text style={styles.dataValue}>{data.best_market.predicted_price} LKR/kg</Text>
+          <Text style={themedStyles.dataLabel}>{mt.price}</Text>
+          <Text style={themedStyles.dataValue}>{data.best_market.predicted_price} LKR/kg</Text>
         </View>
         <View style={styles.dataRow}>
-          <Text style={styles.dataLabel}>Distance:</Text>
-          <Text style={styles.dataValue}>{data.best_market.distance} km</Text>
+          <Text style={themedStyles.dataLabel}>{mt.distance}</Text>
+          <Text style={themedStyles.dataValue}>{data.best_market.distance} {mt.kmUnit}</Text>
         </View>
         <View style={styles.dataRow}>
-          <Text style={styles.dataLabel}>Potential Profit:</Text>
-          <Text style={styles.dataValue}>{data.best_market.potential_profit.toFixed(2)} LKR</Text>
+          <Text style={themedStyles.dataLabel}>{mt.potentialProfit}</Text>
+          <Text style={themedStyles.dataValue}>{data.best_market.potential_profit.toFixed(2)} LKR</Text>
         </View>
       </View>
     );
@@ -324,24 +554,44 @@ const ChatBotScreen = () => {
   const renderPriceData = (data: any) => {
     if (!data || !data.price) return null;
     
+    // Price-specific translations
+    const priceTranslations = {
+      en: {
+        title: "Price Prediction",
+        price: "Price:",
+        bananaType: "Banana Type:",
+        location: "Location:",
+        date: "Date:"
+      },
+      si: {
+        title: "මිල පුරෝකථනය",
+        price: "මිල:",
+        bananaType: "කෙසෙල් වර්ගය:",
+        location: "ස්ථානය:",
+        date: "දිනය:"
+      }
+    };
+    
+    const pt = appLanguage === 'si' ? priceTranslations.si : priceTranslations.en;
+    
     return (
-      <View style={styles.dataCard}>
-        <Text style={styles.dataTitle}>Price Prediction</Text>
+      <View style={themedStyles.dataCard}>
+        <Text style={themedStyles.dataTitle}>{pt.title}</Text>
         <View style={styles.dataRow}>
-          <Text style={styles.dataLabel}>Price:</Text>
-          <Text style={styles.dataValue}>{data.price} {data.currency}/kg</Text>
+          <Text style={themedStyles.dataLabel}>{pt.price}</Text>
+          <Text style={themedStyles.dataValue}>{data.price} {data.currency}/kg</Text>
         </View>
         <View style={styles.dataRow}>
-          <Text style={styles.dataLabel}>Banana Type:</Text>
-          <Text style={styles.dataValue}>{data.banana_type}</Text>
+          <Text style={themedStyles.dataLabel}>{pt.bananaType}</Text>
+          <Text style={themedStyles.dataValue}>{data.banana_type}</Text>
         </View>
         <View style={styles.dataRow}>
-          <Text style={styles.dataLabel}>Location:</Text>
-          <Text style={styles.dataValue}>{data.location}</Text>
+          <Text style={themedStyles.dataLabel}>{pt.location}</Text>
+          <Text style={themedStyles.dataValue}>{data.location}</Text>
         </View>
         <View style={styles.dataRow}>
-          <Text style={styles.dataLabel}>Date:</Text>
-          <Text style={styles.dataValue}>{data.date}</Text>
+          <Text style={themedStyles.dataLabel}>{pt.date}</Text>
+          <Text style={themedStyles.dataValue}>{data.date}</Text>
         </View>
       </View>
     );
@@ -354,42 +604,43 @@ const ChatBotScreen = () => {
     }
     
     return (
-      <View style={styles.contextContainer}>
-        <Text style={styles.contextTitle}>Current Context:</Text>
+      <View style={themedStyles.contextContainer}>
+        <Text style={themedStyles.contextTitle}>{t.currentContext}</Text>
         <View style={styles.chipContainer}>
           {locationContext && (
             <TouchableOpacity 
-              style={styles.chip} 
+              style={themedStyles.chip} 
               onPress={() => setLocationContext('')}
             >
-              <Text style={styles.chipText}>Location: {locationContext}</Text>
-              <Text style={styles.chipClose}>×</Text>
+              <Text style={themedStyles.chipText}>{t.locationChip}{locationContext}</Text>
+              <Text style={themedStyles.chipClose}>×</Text>
             </TouchableOpacity>
           )}
           
           {bananaTypeContext && (
             <TouchableOpacity 
-              style={styles.chip} 
+              style={themedStyles.chip} 
               onPress={() => setBananaTypeContext('')}
             >
-              <Text style={styles.chipText}>Type: {bananaTypeContext}</Text>
-              <Text style={styles.chipClose}>×</Text>
+              <Text style={themedStyles.chipText}>{t.typeChip}{bananaTypeContext}</Text>
+              <Text style={themedStyles.chipClose}>×</Text>
             </TouchableOpacity>
           )}
           
           {quantityContext !== null && (
             <TouchableOpacity 
-              style={styles.chip} 
+              style={themedStyles.chip} 
               onPress={() => setQuantityContext(null)}
             >
-              <Text style={styles.chipText}>Quantity: {quantityContext} kg</Text>
-              <Text style={styles.chipClose}>×</Text>
+              <Text style={themedStyles.chipText}>{t.quantityChip}{quantityContext}{t.kgUnit}</Text>
+              <Text style={themedStyles.chipClose}>×</Text>
             </TouchableOpacity>
           )}
         </View>
       </View>
     );
   };
+
 
   // Language selector modal
   const renderLanguageModal = () => {
@@ -401,34 +652,34 @@ const ChatBotScreen = () => {
         onRequestClose={() => setMenuVisible(false)}
       >
         <TouchableOpacity 
-          style={styles.modalOverlay}
+          style={themedStyles.modalOverlay}
           activeOpacity={1}
           onPress={() => setMenuVisible(false)}
         >
-          <View style={styles.languageModalContent}>
-            <Text style={styles.languageModalTitle}>Select Language</Text>
+          <View style={themedStyles.languageModalContent}>
+            <Text style={themedStyles.languageModalTitle}>{t.selectLanguage}</Text>
             <FlatList
               data={supportedLanguages}
               keyExtractor={(item) => item}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[
-                    styles.languageOption,
-                    language === item && styles.selectedLanguageOption
+                    themedStyles.languageOption,
+                    chatLanguage === item && themedStyles.selectedLanguageOption
                   ]}
                   onPress={() => {
-                    setLanguage(item);
+                    setChatLanguage(item);
                     setMenuVisible(false);
                   }}
                 >
                   <Text style={[
-                    styles.languageOptionText,
-                    language === item && styles.selectedLanguageOptionText
+                    themedStyles.languageOptionText,
+                    chatLanguage === item && themedStyles.selectedLanguageOptionText
                   ]}>
                     {item.charAt(0).toUpperCase() + item.slice(1)}
                   </Text>
-                  {language === item && (
-                    <Text style={styles.checkmark}>✓</Text>
+                  {chatLanguage === item && (
+                    <Text style={themedStyles.checkmark}>✓</Text>
                   )}
                 </TouchableOpacity>
               )}
@@ -440,33 +691,33 @@ const ChatBotScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={themedStyles.safeArea}>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={themedStyles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        <View style={styles.header}>
+        <View style={themedStyles.header}>
           <TouchableOpacity 
             style={styles.languageSelector}
             onPress={() => setMenuVisible(true)}
           >
-            <Text style={styles.languageLabel}>Language:</Text>
-            <View style={styles.languageChip}>
-              <Text style={styles.languageChipText}>
-                {language.charAt(0).toUpperCase() + language.slice(1)}
+            <Text style={themedStyles.languageLabel}>{t.language}</Text>
+            <View style={themedStyles.languageChip}>
+              <Text style={themedStyles.languageChipText}>
+                {chatLanguage.charAt(0).toUpperCase() + chatLanguage.slice(1)}
               </Text>
-              <Text style={styles.languageChipIcon}>▼</Text>
+              <Text style={themedStyles.languageChipIcon}>▼</Text>
             </View>
           </TouchableOpacity>
           
           {apiStatus === 'disconnected' && (
             <TouchableOpacity 
-              style={styles.statusChip}
+              style={themedStyles.statusChip}
               onPress={retryConnection}
             >
               <Text style={styles.statusChipText}>
-                {checkingApi ? 'Reconnecting...' : 'Offline'}
+                {checkingApi ? t.reconnecting : t.offline}
               </Text>
             </TouchableOpacity>
           )}
@@ -484,13 +735,15 @@ const ChatBotScreen = () => {
               <View 
                 style={[
                   styles.messageContainer, 
-                  chat.isBot ? styles.botMessage : styles.userMessage
+                  chat.isBot ? themedStyles.botMessage : themedStyles.userMessage
                 ]}
               >
-                <Text style={[
-                  styles.messageText,
-                  { color: chat.isBot ? COLORS.text : COLORS.white }
-                ]}>
+                <Text style={{
+                  ...styles.messageText,
+                  color: chat.isBot 
+                    ? (isDark ? '#e0e0e0' : COLORS.text) 
+                    : COLORS.white
+                }}>
                   {chat.text}
                 </Text>
               </View>
@@ -500,24 +753,24 @@ const ChatBotScreen = () => {
             </View>
           ))}
           {loading && (
-            <View style={styles.loadingContainer}>
+            <View style={themedStyles.loadingContainer}>
               <ActivityIndicator size="small" color={COLORS.primary} />
-              <Text style={styles.loadingText}>Thinking...</Text>
+              <Text style={themedStyles.loadingText}>{t.loadingText}</Text>
             </View>
           )}
         </ScrollView>
         
         <View style={[
-          styles.inputContainer,
+          themedStyles.inputContainer,
           keyboardShown && Platform.OS === 'ios' ? styles.inputContainerWithKeyboard : null
         ]}>
           <RNTextInput
             ref={inputRef}
-            style={styles.input}
+            style={themedStyles.input}
             value={message}
             onChangeText={setMessage}
-            placeholder="Type your message here..."
-            placeholderTextColor="#888"
+            placeholder={t.messagePlaceholder}
+            placeholderTextColor={isDark ? "#777777" : "#888888"}
             editable={!(loading || apiStatus === 'disconnected')}
             multiline={true}
           />
@@ -529,7 +782,7 @@ const ChatBotScreen = () => {
             onPress={handleSend}
             disabled={!message.trim() || loading || apiStatus === 'disconnected'}
           >
-            <Text style={styles.sendButtonText}>Send</Text>
+            <Text style={styles.sendButtonText}>{t.sendButton}</Text>
           </TouchableOpacity>
         </View>
         

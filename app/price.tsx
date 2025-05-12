@@ -9,9 +9,18 @@ import {
   SafeAreaView,
   Image
 } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, Router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/constants/Colors';
+import { useLanguage } from '@/components/LanguageContext';
+import { useAppColorScheme } from '@/components/ThemeContext';
+
+// Define a proper type for the router
+type AppRouter = Router & {
+  push: (route: string) => void;
+  replace: (route: string) => void;
+  back: () => void;
+};
 
 export default function PriceRoute() {
   return (
@@ -28,61 +37,184 @@ export default function PriceRoute() {
 }
 
 const PriceScreen = () => {
-  const router = useRouter();  
+  const router = useRouter() as AppRouter;
+  const { language } = useLanguage();
+  const colorScheme = useAppColorScheme();
+  const isDark = colorScheme === 'dark';
+  
+  const translations = {
+    en: {
+      appName: "SMART MUSA",
+      title: "Banana Price Prediction",
+      subtitle: "Get accurate price predictions for your banana harvest in different markets across Sri Lanka.",
+      checkPricesButton: "Check Market Prices",
+      askAssistantButton: "Ask Farming Assistant",
+      descriptionTitle: "Description",
+      description: "Our price prediction system uses advanced machine learning algorithms to forecast banana prices in various markets. We analyze historical price trends, seasonal patterns, and market demand to provide farmers with actionable insights. This helps farmers decide when and where to sell their harvest for maximum profit.",
+      benefitsTitle: "Benefits for Farmers",
+      benefits: [
+        {
+          icon: "cash-outline",
+          title: "Better Profit Margins",
+          description: "Make informed decisions on when and where to sell for maximum profit"
+        },
+        {
+          icon: "time-outline",
+          title: "Market Timing",
+          description: "Know the best time to sell based on predicted price trends"
+        },
+        {
+          icon: "analytics-outline",
+          title: "Data-Driven Decisions",
+          description: "Make farming decisions based on accurate data and predictions"
+        }
+      ],
+      features: [
+        { icon: "trending-up", text: "Market Analysis" },
+        { icon: "location", text: "Regional Prices" },
+        { icon: "calendar", text: "Seasonal Trends" }
+      ]
+    },
+    si: {
+      appName: "ස්මාර්ට් මූසා",
+      title: "කෙසෙල් මිල පුරෝකථනය",
+      subtitle: "ඔබේ කෙසෙල් අස්වැන්න සඳහා ශ්‍රී ලංකාව පුරා විවිධ වෙළඳපොලවල් සඳහා නිවැරදි මිල අනාවැකි ලබා ගන්න.",
+      checkPricesButton: "වෙළඳපොල මිල පරීක්ෂා කරන්න",
+      askAssistantButton: "ගොවිතැන් සහායකයෙන් අසන්න",
+      descriptionTitle: "විස්තරය",
+      description: "අපගේ මිල අනාවැකි පද්ධතිය විවිධ වෙළඳපොලවල කෙසෙල් මිල පුරෝකථනය කිරීමට උසස් මැෂින් ලර්නිං ඇල්ගොරිතම භාවිතා කරයි. ගොවීන්ට ක්‍රියාත්මක කළ හැකි අන්තර්දෘෂ්ටි සැපයීම සඳහා අපි ඓතිහාසික මිල ප්‍රවණතා, කාලීන රටා සහ වෙළඳපොල ඉල්ලුම විශ්ලේෂණය කරමු. මෙය ගොවීන්ට උපරිම ලාභයක් සඳහා ඔවුන්ගේ අස්වැන්න විකුණන විට සහ කොතැනද යන්න තීරණය කිරීමට උපකාරී වේ.",
+      benefitsTitle: "ගොවීන් සඳහා ප්‍රතිලාභ",
+      benefits: [
+        {
+          icon: "cash-outline",
+          title: "වැඩි ලාභ ආන්තික",
+          description: "උපරිම ලාභය සඳහා කවදා සහ කොහේද විකුණන්නේ යන්න පිළිබඳ දැනුවත් තීරණ ගන්න"
+        },
+        {
+          icon: "time-outline",
+          title: "වෙළඳපොල කාලය",
+          description: "පුරෝකථනය කළ මිල ප්‍රවණතා මත පදනම්ව හොඳම විකුණුම් කාලය දැන ගන්න"
+        },
+        {
+          icon: "analytics-outline",
+          title: "දත්ත-පදනම් තීරණ",
+          description: "නිවැරදි දත්ත සහ පුරෝකථන මත පදනම්ව ගොවිතැන් තීරණ ගන්න"
+        }
+      ],
+      features: [
+        { icon: "trending-up", text: "වෙළඳපොල විශ්ලේෂණය" },
+        { icon: "location", text: "ප්‍රාදේශීය මිල ගණන්" },
+        { icon: "calendar", text: "කාලීන ප්‍රවණතා" }
+      ]
+    }
+  };
+
+  // Get the current language text
+  const t = language === 'si' ? translations.si : translations.en;
+
+  const themedStyles = {
+    safeArea: {
+      ...styles.safeArea,
+      backgroundColor: isDark ? '#121212' : '#f8f9fa',
+    },
+    scrollView: {
+      ...styles.scrollView,
+      backgroundColor: isDark ? '#121212' : '#f8f9fa',
+    },
+    mainCard: {
+      ...styles.mainCard,
+      backgroundColor: isDark ? '#1e1e1e' : '#fff',
+      shadowColor: isDark ? '#000' : '#000',
+    },
+    title: {
+      ...styles.title,
+      color: isDark ? '#4CAF50' : '#2C5E1A',
+    },
+    subtitle: {
+      ...styles.subtitle,
+      color: isDark ? '#e0e0e0' : '#444',
+    },
+    featureIcon: {
+      ...styles.featureIcon,
+      backgroundColor: isDark ? '#2a2a2a' : '#f0f9f0',
+      borderColor: isDark ? '#333333' : '#e0f0e0',
+    },
+    featureText: {
+      ...styles.featureText,
+      color: isDark ? '#cccccc' : '#444',
+    },
+    descriptionCard: {
+      ...styles.descriptionCard,
+      backgroundColor: isDark ? '#1e1e1e' : '#fff',
+    },
+    descriptionTitle: {
+      ...styles.descriptionTitle,
+      color: isDark ? '#4CAF50' : '#2C5E1A',
+    },
+    descriptionText: {
+      ...styles.descriptionText,
+      color: isDark ? '#e0e0e0' : '#444',
+    },
+    benefitsCard: {
+      ...styles.benefitsCard,
+      backgroundColor: isDark ? '#1e1e1e' : '#fff',
+    },
+    benefitsTitle: {
+      ...styles.benefitsTitle,
+      color: isDark ? '#4CAF50' : '#2C5E1A',
+    },
+    benefitTitle: {
+      ...styles.benefitTitle,
+      color: isDark ? '#e0e0e0' : '#333',
+    },
+    benefitDescription: {
+      ...styles.benefitDescription,
+      color: isDark ? '#cccccc' : '#555',
+    },
+  };
   
   const navigateToPrediction = () => {
-    (router as any).push('/prediction');
+    router.push('/prediction');
   };
 
   const navigateToChatbot = () => {
-    (router as any).push('/chatbot');
+    router.push('/chatbot');
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#2C5E1A" />
+    <SafeAreaView style={themedStyles.safeArea}>
+      <StatusBar 
+        barStyle={isDark ? "light-content" : "light-content"} 
+        backgroundColor="#2C5E1A" 
+      />
 
       {/* App Header */}
       <View style={styles.header}>
-        <Text style={styles.headerText}>SMART MUSA</Text>
+        <Text style={styles.headerText}>{t.appName}</Text>
       </View>
       
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={themedStyles.scrollView}>
         <View style={styles.container}>
           {/* Main Content Card */}
-          <View style={styles.mainCard}>
-            <Text style={styles.title}>Banana Price Prediction</Text>
+          <View style={themedStyles.mainCard}>
+            <Text style={themedStyles.title}>{t.title}</Text>
             
-            <Text style={styles.subtitle}>
-              Get accurate price predictions for your banana harvest in different markets across Sri Lanka.
-            </Text>
-            
-            <Text style={styles.sinhalaSubtitle}>
-              ඔබේ කෙසෙල් අස්වැන්න සඳහා ශ්‍රී ලංකාව පුරා විවිධ වෙළඳපොලවල් සඳහා නිවැරදි මිල අනාවැකි ලබා ගන්න.
-            </Text>
+            <Text style={themedStyles.subtitle}>{t.subtitle}</Text>
             
             {/* Feature icons */}
             <View style={styles.featuresContainer}>
-              <View style={styles.featureItem}>
-                <View style={styles.featureIcon}>
-                  <Ionicons name="trending-up" size={24} color="#2C5E1A" />
+              {t.features.map((feature, index) => (
+                <View key={index} style={styles.featureItem}>
+                  <View style={themedStyles.featureIcon}>
+                    <Ionicons 
+                      name={feature.icon as any} 
+                      size={24} 
+                      color={isDark ? "#4CAF50" : "#2C5E1A"} 
+                    />
+                  </View>
+                  <Text style={themedStyles.featureText}>{feature.text}</Text>
                 </View>
-                <Text style={styles.featureText}>Market Analysis</Text>
-              </View>
-              
-              <View style={styles.featureItem}>
-                <View style={styles.featureIcon}>
-                  <Ionicons name="location" size={24} color="#2C5E1A" />
-                </View>
-                <Text style={styles.featureText}>Regional Prices</Text>
-              </View>
-              
-              <View style={styles.featureItem}>
-                <View style={styles.featureIcon}>
-                  <Ionicons name="calendar" size={24} color="#2C5E1A" />
-                </View>
-                <Text style={styles.featureText}>Seasonal Trends</Text>
-              </View>
+              ))}
             </View>
 
             {/* Action Buttons */}
@@ -92,7 +224,7 @@ const PriceScreen = () => {
               activeOpacity={0.8}
             >
               <Ionicons name="bar-chart-outline" size={20} color="#fff" style={styles.buttonIcon} />
-              <Text style={styles.buttonText}>Check Market Prices</Text>
+              <Text style={styles.buttonText}>{t.checkPricesButton}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -101,78 +233,39 @@ const PriceScreen = () => {
               activeOpacity={0.8}
             >
               <Ionicons name="chatbubble-outline" size={20} color="#fff" style={styles.buttonIcon} />
-              <Text style={styles.buttonText}>Ask Farming Assistant</Text>
+              <Text style={styles.buttonText}>{t.askAssistantButton}</Text>
             </TouchableOpacity>
           </View>
 
           {/* Description Card */}
-          <View style={styles.descriptionCard}>
+          <View style={themedStyles.descriptionCard}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="information-circle-outline" size={24} color="#2C5E1A" />
-              <Text style={styles.descriptionTitle}>Description</Text>
+              <Ionicons 
+                name="information-circle-outline" 
+                size={24} 
+                color={isDark ? "#4CAF50" : "#2C5E1A"} 
+              />
+              <Text style={themedStyles.descriptionTitle}>{t.descriptionTitle}</Text>
             </View>
             
-            <Text style={styles.descriptionText}>
-              Our price prediction system uses advanced machine learning algorithms to forecast banana prices 
-              in various markets. We analyze historical price trends, seasonal patterns, and market demand 
-              to provide farmers with actionable insights. This helps farmers decide when and where to sell 
-              their harvest for maximum profit.
-            </Text>
-
-            <View style={styles.divider} />
-
-            <View style={styles.sectionHeader}>
-              <Ionicons name="information-circle-outline" size={24} color="#2C5E1A" />
-              <Text style={styles.descriptionTitle}>විස්තරය</Text>
-            </View>
-            
-            <Text style={styles.descriptionText}>
-              අපගේ මිල අනාවැකි පද්ධතිය විවිධ වෙළඳපොලවල කෙසෙල් මිල පුරෝකථනය කිරීමට උසස් මැෂින් ලර්නිං ඇල්ගොරිතම භාවිතා කරයි. 
-              ගොවීන්ට ක්‍රියාත්මක කළ හැකි අන්තර්දෘෂ්ටි සැපයීම සඳහා අපි ඓතිහාසික මිල ප්‍රවණතා, කාලීන රටා සහ වෙළඳපොල 
-              ඉල්ලුම විශ්ලේෂණය කරමු. මෙය ගොවීන්ට උපරිම ලාභයක් සඳහා ඔවුන්ගේ අස්වැන්න විකුණන විට සහ කොතැනද යන්න 
-              තීරණය කිරීමට උපකාරී වේ.
-            </Text>
+            <Text style={themedStyles.descriptionText}>{t.description}</Text>
           </View>
           
           {/* Benefits Card */}
-          <View style={styles.benefitsCard}>
-            <Text style={styles.benefitsTitle}>Benefits for Farmers</Text>
+          <View style={themedStyles.benefitsCard}>
+            <Text style={themedStyles.benefitsTitle}>{t.benefitsTitle}</Text>
             
-            <View style={styles.benefitRow}>
-              <View style={styles.benefitIconContainer}>
-                <Ionicons name="cash-outline" size={20} color="#fff" />
+            {t.benefits.map((benefit, index) => (
+              <View key={index} style={styles.benefitRow}>
+                <View style={styles.benefitIconContainer}>
+                  <Ionicons name={benefit.icon as any} size={20} color="#fff" />
+                </View>
+                <View style={styles.benefitContent}>
+                  <Text style={themedStyles.benefitTitle}>{benefit.title}</Text>
+                  <Text style={themedStyles.benefitDescription}>{benefit.description}</Text>
+                </View>
               </View>
-              <View style={styles.benefitContent}>
-                <Text style={styles.benefitTitle}>Better Profit Margins</Text>
-                <Text style={styles.benefitDescription}>
-                  Make informed decisions on when and where to sell for maximum profit
-                </Text>
-              </View>
-            </View>
-            
-            <View style={styles.benefitRow}>
-              <View style={styles.benefitIconContainer}>
-                <Ionicons name="time-outline" size={20} color="#fff" />
-              </View>
-              <View style={styles.benefitContent}>
-                <Text style={styles.benefitTitle}>Market Timing</Text>
-                <Text style={styles.benefitDescription}>
-                  Know the best time to sell based on predicted price trends
-                </Text>
-              </View>
-            </View>
-            
-            <View style={styles.benefitRow}>
-              <View style={styles.benefitIconContainer}>
-                <Ionicons name="analytics-outline" size={20} color="#fff" />
-              </View>
-              <View style={styles.benefitContent}>
-                <Text style={styles.benefitTitle}>Data-Driven Decisions</Text>
-                <Text style={styles.benefitDescription}>
-                  Make farming decisions based on accurate data and predictions
-                </Text>
-              </View>
-            </View>
+            ))}
           </View>
         </View>
       </ScrollView>
@@ -211,7 +304,6 @@ const styles = StyleSheet.create({
   },
   mainCard: {
     width: '90%',
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 20,
     marginTop: 16,
@@ -234,13 +326,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#444',
     textAlign: 'center',
-    lineHeight: 22,
-  },
-  sinhalaSubtitle: {
-    fontSize: 16,
-    color: '#444',
-    textAlign: 'center',
-    marginTop: 8,
     lineHeight: 22,
   },
   featuresContainer: {

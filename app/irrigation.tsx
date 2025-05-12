@@ -10,8 +10,9 @@ import {
   Modal,
   Platform,
   ActivityIndicator,
-  Text
 } from 'react-native';
+import { useAppColorScheme } from '@/components/ThemeContext';
+import { Text, View as ThemedView } from '@/components/Themed';
 import { Stack } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '@/components/LanguageContext';
@@ -116,6 +117,8 @@ interface TranslationsType {
 
 const IrrigationDashboard = () => {
   const { language } = useLanguage() as { language: string };
+  const colorScheme = useAppColorScheme();
+  const isDark = colorScheme === 'dark';
   const [timeRange, setTimeRange] = useState<string>('24h');
   const [settingsVisible, setSettingsVisible] = useState<boolean>(false);
   const [timeRangeModalVisible, setTimeRangeModalVisible] = useState<boolean>(false);
@@ -134,6 +137,111 @@ const IrrigationDashboard = () => {
     operationMode: false,
     testMode: false,
   });
+
+  const themedStyles = {
+    safeArea: {
+      ...styles.safeArea,
+      backgroundColor: isDark ? '#121212' : '#f8f9fa',
+    },
+    card: {
+      ...styles.card,
+      backgroundColor: isDark ? '#1e1e1e' : '#ffffff',
+    },
+    cardHeader: {
+      ...styles.cardHeader,
+      backgroundColor: isDark ? '#2a2a2a' : '#ffffff',
+      borderBottomColor: isDark ? '#333333' : '#e0e0e0',
+    },
+    cardTitle: {
+      ...styles.cardTitle,
+      color: isDark ? '#ffffff' : '#333333',
+    },
+    summaryItem: {
+      ...styles.summaryItem,
+      backgroundColor: isDark ? '#282828' : '#f5f5f5',
+    },
+    summaryLabel: {
+      ...styles.summaryLabel,
+      color: isDark ? '#e0e0e0' : '#666666',
+    },
+    summaryValue: {
+      ...styles.summaryValue,
+      color: isDark ? '#ffffff' : '#333333',
+    },
+    tableRow: {
+      ...styles.tableRow,
+      backgroundColor: isDark ? '#1e1e1e' : '#ffffff',
+      borderColor: isDark ? '#333333' : '#e0e0e0',
+    },
+    tableRowOdd: {
+      backgroundColor: isDark ? '#252525' : '#f9f9f9',
+    },
+    tableCell: {
+      ...styles.tableCell,
+      color: isDark ? '#e0e0e0' : '#333333',
+    },
+    loadingText: {
+      ...styles.loadingText,
+      color: isDark ? '#cccccc' : '#666666',
+    },
+    modalContainer: {
+      ...styles.modalContainer,
+      backgroundColor: isDark ? '#1e1e1e' : '#ffffff',
+    },
+    modalTitle: {
+      ...styles.modalTitle,
+      color: isDark ? '#ffffff' : '#333333',
+    },
+    modalOption: {
+      ...styles.modalOption,
+      borderBottomColor: isDark ? '#333333' : '#e0e0e0',
+    },
+    selectedOption: {
+      backgroundColor: isDark ? '#2C5E1A33' : '#f0f9f0',
+    },
+    modalOptionText: {
+      ...styles.modalOptionText,
+      color: isDark ? '#e0e0e0' : '#333333',
+    },
+    settingsModalOverlay: {
+      ...styles.settingsModalOverlay,
+      backgroundColor: isDark ? '#121212' : '#f8f9fa',
+    },
+    settingLabel: {
+      ...styles.settingLabel,
+      color: isDark ? '#ffffff' : '#333333',
+    },
+    settingButton: {
+      ...styles.settingButton,
+      backgroundColor: isDark ? '#282828' : '#f5f5f5',
+      borderColor: isDark ? '#333333' : '#e0e0e0',
+    },
+    settingButtonText: {
+      ...styles.settingButtonText,
+      color: isDark ? '#4CAF50' : '#2C5E1A',
+    },
+    toggleContainer: {
+      ...styles.toggleContainer,
+      borderColor: isDark ? '#333333' : '#e0e0e0',
+    },
+    toggleOption: {
+      ...styles.toggleOption,
+      backgroundColor: isDark ? '#282828' : '#f5f5f5',
+    },
+    toggleOptionText: {
+      ...styles.toggleOptionText,
+      color: isDark ? '#cccccc' : '#666666',
+    },
+    cancelButton: {
+      ...styles.cancelButton,
+      backgroundColor: isDark ? '#282828' : '#f5f5f5',
+      borderColor: isDark ? '#333333' : '#e0e0e0',
+    },
+    cancelButtonText: {
+      ...styles.cancelButtonText,
+      color: isDark ? '#cccccc' : '#666666',
+    },
+  };
   
   const [temperatureData, setTemperatureData] = useState<number[]>([]);
   const [humidityData, setHumidityData] = useState<number[]>([]);
@@ -381,22 +489,22 @@ const IrrigationDashboard = () => {
   const renderChartData = (title: string, data: number[]) => {
     if (data.length === 0 || chartLabels.length === 0) {
       return (
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>{title}</Text>
+        <View style={themedStyles.card}>
+          <View style={themedStyles.cardHeader}>
+            <Text style={themedStyles.cardTitle}>{title}</Text>
           </View>
           <View style={styles.cardContent}>
             <ActivityIndicator size="small" color={COLORS.primary || "#2C5E1A"} />
-            <Text style={styles.loadingText}>{t.loading}</Text>
+            <Text style={themedStyles.loadingText}>{t.loading}</Text>
           </View>
         </View>
       );
     }
-
+  
     return (
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>{title}</Text>
+      <View style={themedStyles.card}>
+        <View style={themedStyles.cardHeader}>
+          <Text style={themedStyles.cardTitle}>{title}</Text>
         </View>
         <View style={styles.cardContent}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -406,9 +514,11 @@ const IrrigationDashboard = () => {
                   <Text key={index} style={styles.tableHeaderCell}>{label}</Text>
                 ))}
               </View>
-              <View style={styles.tableRow}>
+              <View style={themedStyles.tableRow}>
                 {data.map((value, index) => (
-                  <Text key={index} style={styles.tableCell}>{value.toFixed(1)}</Text>
+                  <Text key={index} style={[themedStyles.tableCell, styles.numericCell]}>
+                    {value.toFixed(1)}
+                  </Text>
                 ))}
               </View>
             </View>
@@ -430,25 +540,25 @@ const IrrigationDashboard = () => {
         activeOpacity={1}
         onPress={() => setTimeRangeModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{t.timeRange}</Text>
-            <TouchableOpacity onPress={() => setTimeRangeModalVisible(false)}>
-              <Ionicons name="close" size={24} color="#666" />
-            </TouchableOpacity>
-          </View>
+      <View style={themedStyles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <Text style={themedStyles.modalTitle}>{t.timeRange}</Text>
+          <TouchableOpacity onPress={() => setTimeRangeModalVisible(false)}>
+            <Ionicons name="close" size={24} color={isDark ? "#aaaaaa" : "#666666"} />
+          </TouchableOpacity>
+        </View>
           
-          <TouchableOpacity 
-            style={[styles.modalOption, timeRange === '24h' && styles.selectedOption]}
-            onPress={() => {
-              setTimeRange('24h');
-              loadHistoricalData('24h');
-              setTimeRangeModalVisible(false);
-            }}
-          >
-            <Text style={[styles.modalOptionText, timeRange === '24h' && styles.selectedOptionText]}>
-              {t.lastDay}
-            </Text>
+        <TouchableOpacity 
+          style={[themedStyles.modalOption, timeRange === '24h' && themedStyles.selectedOption]}
+          onPress={() => {
+            setTimeRange('24h');
+            loadHistoricalData('24h');
+            setTimeRangeModalVisible(false);
+          }}
+        >
+          <Text style={[themedStyles.modalOptionText, timeRange === '24h' && styles.selectedOptionText]}>
+            {t.lastDay}
+          </Text>
             {timeRange === '24h' && <Ionicons name="checkmark" size={22} color={COLORS.primary || "#2C5E1A"} />}
           </TouchableOpacity>
           
@@ -748,7 +858,7 @@ const IrrigationDashboard = () => {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={themedStyles.safeArea}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{t.title}</Text>
         <TouchableOpacity 
@@ -760,43 +870,44 @@ const IrrigationDashboard = () => {
       </View>
 
       {loading ? (
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingContainer, { backgroundColor: isDark ? '#121212' : '#f8f9fa' }]}>
           <ActivityIndicator size="large" color={COLORS.primary || "#2C5E1A"} />
           <Text style={styles.loadingText}>{t.loading}</Text>
         </View>
       ) : (
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <ScrollView style={[styles.scrollView, { backgroundColor: isDark ? '#121212' : '#f8f9fa' }]} contentContainerStyle={styles.scrollContent}>
           {/* Summary Card */}
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>{t.summary}</Text>
+          <View style={themedStyles.card}>
+            <View style={themedStyles.cardHeader}>
+              <Text style={themedStyles.cardTitle}>{t.summary}</Text>
             </View>
             <View style={styles.cardContent}>
               <View style={styles.summaryGrid}>
-                <View style={styles.summaryItem}>
-                  <Text style={styles.summaryLabel}>{t.avgTemperature}</Text>
-                  <Text style={styles.summaryValue}>{summaryData.avgTemperature}</Text>
+                {/* Update each summary item */}
+                <View style={themedStyles.summaryItem}>
+                  <Text style={themedStyles.summaryLabel}>{t.avgTemperature}</Text>
+                  <Text style={themedStyles.summaryValue}>{summaryData.avgTemperature}</Text>
                 </View>
-                <View style={styles.summaryItem}>
-                  <Text style={styles.summaryLabel}>{t.avgHumidity}</Text>
-                  <Text style={styles.summaryValue}>{summaryData.avgHumidity}</Text>
+                <View style={themedStyles.summaryItem}>
+                  <Text style={themedStyles.summaryLabel}>{t.avgHumidity}</Text>
+                  <Text style={themedStyles.summaryValue}>{summaryData.avgHumidity}</Text>
                 </View>
-                <View style={styles.summaryItem}>
-                  <Text style={styles.summaryLabel}>{t.avgMoisture}</Text>
-                  <Text style={styles.summaryValue}>{summaryData.avgMoisture}</Text>
+                <View style={themedStyles.summaryItem}>
+                  <Text style={themedStyles.summaryLabel}>{t.avgMoisture}</Text>
+                  <Text style={themedStyles.summaryValue}>{summaryData.avgMoisture}</Text>
                 </View>
-                <View style={styles.summaryItem}>
-                  <Text style={styles.summaryLabel}>{t.rainPossibility}</Text>
-                  <Text style={styles.summaryValue}>{summaryData.rainPossibility}</Text>
+                <View style={themedStyles.summaryItem}>
+                  <Text style={themedStyles.summaryLabel}>{t.rainPossibility}</Text>
+                  <Text style={themedStyles.summaryValue}>{summaryData.rainPossibility}</Text>
                 </View>
               </View>
             </View>
           </View>
 
           {/* Sensor Data Card */}
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>{t.sensorData}</Text>
+          <View style={themedStyles.card}>
+            <View style={themedStyles.cardHeader}>
+              <Text style={themedStyles.cardTitle}>{t.sensorData}</Text>
             </View>
             <View style={styles.cardContent}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -813,23 +924,23 @@ const IrrigationDashboard = () => {
                   {sensorData.length > 0 ? (
                     sensorData.map((row, index) => (
                       <View key={index} style={[
-                        styles.tableRow, 
-                        index % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd
+                        themedStyles.tableRow, 
+                        index % 2 === 0 ? null : themedStyles.tableRowOdd
                       ]}>
-                        <Text style={styles.tableCell}>{row.module}</Text>
-                        <Text style={[styles.tableCell, styles.numericCell]}>
+                        <Text style={themedStyles.tableCell}>{row.module}</Text>
+                        <Text style={[themedStyles.tableCell, styles.numericCell]}>
                           {row.battery?.toFixed(1)}
                         </Text>
-                        <Text style={[styles.tableCell, styles.numericCell]}>
+                        <Text style={[themedStyles.tableCell, styles.numericCell]}>
                           {row.humidity?.toFixed(1)}
                         </Text>
-                        <Text style={[styles.tableCell, styles.numericCell]}>
+                        <Text style={[themedStyles.tableCell, styles.numericCell]}>
                           {row.moisture?.toFixed(1)}
                         </Text>
-                        <Text style={[styles.tableCell, styles.numericCell]}>
+                        <Text style={[themedStyles.tableCell, styles.numericCell]}>
                           {row.temperature?.toFixed(1)}
                         </Text>
-                        <Text style={styles.tableCell}>{row.timestamp}</Text>
+                        <Text style={themedStyles.tableCell}>{row.timestamp}</Text>
                       </View>
                     ))
                   ) : (
@@ -875,7 +986,6 @@ const IrrigationDashboard = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   header: {
     backgroundColor: '#2C5E1A',
@@ -923,7 +1033,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   card: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     marginBottom: 16,
     overflow: 'hidden',
@@ -934,7 +1043,6 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
   },
   cardHeader: {
-    backgroundColor: '#f5f5f5',
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
@@ -943,7 +1051,6 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2C5E1A',
     textAlign: 'center',
   },
   cardContent: {
@@ -957,7 +1064,6 @@ const styles = StyleSheet.create({
   },
   summaryItem: {
     width: '48%',
-    backgroundColor: '#f5f5f5',
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
@@ -971,14 +1077,12 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 4,
     textAlign: 'center',
   },
   summaryValue: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2C5E1A',
   },
   tableContainer: {
     minWidth: Dimensions.get('window').width - 60,
@@ -1003,12 +1107,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#e0e0e0',
     padding: 10,
-  },
-  tableRowEven: {
-    backgroundColor: '#fff',
-  },
+  },  
   tableRowOdd: {
-    backgroundColor: '#f9f9f9',
+    // backgroundColor: '#f9f9f9',
   },
   tableCell: {
     flex: 1,
@@ -1016,7 +1117,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     minWidth: 80,
     fontSize: 14,
-    color: '#333',
   },
   numericCell: {
     textAlign: 'right',
@@ -1104,7 +1204,6 @@ const styles = StyleSheet.create({
   },
   settingsModalContainer: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   settingsModalHeader: {
     backgroundColor: '#2C5E1A',

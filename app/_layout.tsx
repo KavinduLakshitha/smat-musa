@@ -8,6 +8,7 @@ import 'react-native-reanimated';
 import { TextStyle } from 'react-native';
 // Import our ThemeProvider and useAppColorScheme
 import { ThemeProvider, useAppColorScheme } from '@/components/ThemeContext';
+import { LanguageProvider } from '@/components/LanguageContext';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -42,7 +43,9 @@ export default function RootLayout() {
   // Wrap the RootLayoutNav with our ThemeProvider
   return (
     <ThemeProvider>
-      <RootLayoutNav />
+      <LanguageProvider>
+        <RootLayoutNav />
+      </LanguageProvider>
     </ThemeProvider>
   );
 }

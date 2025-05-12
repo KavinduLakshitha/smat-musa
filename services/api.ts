@@ -1,8 +1,7 @@
-// api.ts - API service functions
 import axios from 'axios';
 
 // Base URL for the API
-const API_BASE_URL = 'http://192.168.8.162:5000'; // Server running on local network
+const API_BASE_URL = 'https://kavinduLM98-price-prediction.hf.space';
 
 // Interfaces
 export interface PredictionRequest {
